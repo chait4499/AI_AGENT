@@ -17,6 +17,8 @@ export default function App() {
         candidate={flow.candidate}
         onStart={flow.startInterview}
         onBack={flow.reset}
+        loading={flow.loading}
+        error={flow.error}
       />
     );
   }
@@ -27,6 +29,7 @@ export default function App() {
         candidate={flow.candidate}
         state={flow.state}
         loading={flow.loading}
+        error={flow.error}
         totalQuestions={flow.totalQuestions}
         onSubmit={flow.submitAnswer}
         onExit={flow.reset}

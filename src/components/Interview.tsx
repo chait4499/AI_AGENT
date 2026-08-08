@@ -7,6 +7,7 @@ export function Interview({
   candidate,
   state,
   loading,
+  error,
   totalQuestions,
   onSubmit,
   onExit,
@@ -14,8 +15,9 @@ export function Interview({
   candidate: Candidate;
   state: InterviewState;
   loading: boolean;
+  error: string | null;
   totalQuestions: number;
-  onSubmit: (answer: string) => void;
+  onSubmit: (answer: string) => Promise<boolean>;
   onExit: () => void;
 }) {
   const [answer, setAnswer] = useState('');
@@ -27,10 +29,10 @@ export function Interview({
 
   const transcript = state.turns;
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!answer.trim() || loading) return;
-    onSubmit(answer.trim());
-    setAnswer('');
+    const submitted = await onSubmit(answer.trim());
+    if (submitted) setAnswer('');
   };
 
   const questionNumber = state.currentIndex + 1;
@@ -85,13 +87,14 @@ export function Interview({
                   onChange={(e) => setAnswer(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                      handleSubmit();
+                      void handleSubmit();
                     }
                   }}
                   placeholder="Type your answer here… (Cmd/Ctrl + Enter to submit)"
                   rows={6}
                   className="mt-2 w-full rounded-lg border border-ink-200 bg-white px-4 py-3 text-sm text-ink-900 placeholder:text-ink-400 focus:border-accent-400 focus:outline-none focus:ring-1 focus:ring-accent-400"
                 />
+                {error && <p className="mt-2 text-sm text-red-600" role="alert">{error}</p>}
                 <div className="mt-3 flex items-center justify-between">
                   {loading ? <Spinner /> : <span className="text-xs text-ink-400">Take your time — think before answering.</span>}
                   <Button onClick={handleSubmit} disabled={!answer.trim() || loading} size="md">

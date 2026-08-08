@@ -87,4 +87,11 @@ export interface ApiResponse {
   reply: string;
   done: boolean;
   feedback?: Feedback;
+  question?: {
+    day: number;
+    topic: string;
+    difficulty: Difficulty;
+  };
+  questionCount?: number;
+  coveredDays?: number[];
 }

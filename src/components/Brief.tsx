@@ -6,10 +6,14 @@ export function Brief({
   candidate,
   onStart,
   onBack,
+  loading,
+  error,
 }: {
   candidate: Candidate;
   onStart: () => void;
   onBack: () => void;
+  loading: boolean;
+  error: string | null;
 }) {
   const m = candidate.member;
   const profile = deriveProfile(candidate);
@@ -21,13 +25,16 @@ export function Brief({
           <button onClick={onBack} className="text-sm font-medium text-ink-500 hover:text-ink-900">
             ← Back to candidates
           </button>
-          <Button onClick={onStart} size="md">
-            Start Interview
+          <Button onClick={onStart} disabled={loading} size="md">
+            {loading ? 'Starting…' : 'Start Interview'}
           </Button>
         </div>
       </header>
 
       <main className="mx-auto max-w-4xl px-6 py-8">
+        {error && (
+          <p className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">{error}</p>
+        )}
         <div className="flex items-center gap-4">
           <Avatar initials={getInitials(m.name)} name={m.name} />
           <div>
@@ -82,8 +89,8 @@ export function Brief({
         </Card>
 
         <div className="mt-8 flex justify-end">
-          <Button onClick={onStart} size="lg">
-            Start Interview
+          <Button onClick={onStart} disabled={loading} size="lg">
+            {loading ? 'Starting…' : 'Start Interview'}
           </Button>
         </div>
       </main>
