@@ -328,3 +328,57 @@ Files changed:
 Tests/build result:
 - npm run test:interview — passed session initialization, continuation, eight-question/four-day completion, feedback shape, validation errors, storage failure, and session isolation checks.
 - npm run build — passed TypeScript and Vite production build.
+
+Prompt 05 — Supabase Secret Key Security Migration
+Tool: Codex
+
+Full prompt:
+
+Security fix only. Do not refactor or change application behavior.
+
+The current Supabase session store uses the legacy SUPABASE_SERVICE_ROLE_KEY and sends it in both the `apikey` and `Authorization: Bearer` headers.
+
+We want to migrate to Supabase's new server-side secret key.
+
+Make the smallest possible change:
+
+1. Use environment variable:
+   SUPABASE_SECRET_KEY
+
+2. For Supabase REST requests using the new sb_secret_ key, send it in:
+   apikey: <secret key>
+
+3. Do NOT send the sb_secret_ key as:
+   Authorization: Bearer <secret key>
+
+4. Keep SUPABASE_URL unchanged.
+
+5. Do not modify interview logic, UI, database schema, organizer data, or dependencies.
+
+6. Update any tests/environment assumptions affected by this change.
+
+7. Run build and interview tests.
+
+8. Append this full prompt to PROMPTS.md as:
+   Prompt 05 — Supabase Secret Key Security Migration
+   Tool: Codex
+
+Include a short implementation and test summary.
+
+9. After tests pass, commit with:
+   Migrate Supabase session storage to secret key
+
+Push to origin/main.
+
+Never put the actual API key or any environment-variable value into PROMPTS.md, source code, logs, or Git.
+
+Report the files changed, tests, commit hash, and push status.
+
+Implementation summary:
+- Replaced the legacy service-role environment-variable lookup with SUPABASE_SECRET_KEY.
+- Supabase REST requests now send the server-side secret only in the apikey header and omit Authorization.
+- Updated interview tests to verify the new environment-variable assumption, apikey header, omitted Authorization header, and ignored legacy key.
+
+Tests/build result:
+- npm run test:interview — passed, including Supabase secret-key header coverage and existing session behavior checks.
+- npm run build — passed TypeScript and Vite production build.

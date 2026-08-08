@@ -7,5 +7,5 @@ create table if not exists public.interview_sessions (
 
 alter table public.interview_sessions enable row level security;
 
--- The serverless API uses SUPABASE_SERVICE_ROLE_KEY and does not expose this table
+-- The serverless API uses SUPABASE_SECRET_KEY and does not expose this table
 -- directly to browser clients. No anonymous or authenticated-user policies are added.

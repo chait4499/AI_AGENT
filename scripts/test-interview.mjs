@@ -55,10 +55,12 @@ const originalEnvironment = {
   nodeEnv: process.env.NODE_ENV,
   vercelEnv: process.env.VERCEL_ENV,
   supabaseUrl: process.env.SUPABASE_URL,
-  supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  supabaseSecretKey: process.env.SUPABASE_SECRET_KEY,
+  legacySupabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
 };
 
 delete process.env.SUPABASE_URL;
+delete process.env.SUPABASE_SECRET_KEY;
 delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 process.env.NODE_ENV = 'development';
 delete process.env.VERCEL_ENV;
@@ -106,6 +108,26 @@ try {
   assertCurriculumQuestion(continueB);
   assert.equal(continueB.body.questionCount, 2);
 
+  const originalFetch = globalThis.fetch;
+  const testSecretKey = 'unit-test-secret-key';
+  let supabaseRequest;
+  process.env.SUPABASE_URL = 'https://example.supabase.co';
+  process.env.SUPABASE_SECRET_KEY = testSecretKey;
+  process.env.NODE_ENV = 'production';
+  globalThis.fetch = async (_url, options) => {
+    supabaseRequest = options;
+    return new Response(null, { status: 201 });
+  };
+
+  const supabaseStart = await request({ sessionId: 'supabase-header-test', candidate: candidatesData.candidates[0] });
+  assert.equal(supabaseStart.statusCode, 200);
+  assert.equal(supabaseRequest.headers.apikey, testSecretKey);
+  assert.equal('Authorization' in supabaseRequest.headers, false);
+  globalThis.fetch = originalFetch;
+
+  delete process.env.SUPABASE_URL;
+  delete process.env.SUPABASE_SECRET_KEY;
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'legacy-key-must-not-be-used';
   process.env.NODE_ENV = 'production';
   const storageFailure = await request({ sessionId: 'production-without-storage', candidate: candidatesData.candidates[0] });
   assert.equal(storageFailure.statusCode, 500);
@@ -119,7 +141,9 @@ try {
   else process.env.VERCEL_ENV = originalEnvironment.vercelEnv;
   if (originalEnvironment.supabaseUrl === undefined) delete process.env.SUPABASE_URL;
   else process.env.SUPABASE_URL = originalEnvironment.supabaseUrl;
-  if (originalEnvironment.supabaseKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
-  else process.env.SUPABASE_SERVICE_ROLE_KEY = originalEnvironment.supabaseKey;
+  if (originalEnvironment.supabaseSecretKey === undefined) delete process.env.SUPABASE_SECRET_KEY;
+  else process.env.SUPABASE_SECRET_KEY = originalEnvironment.supabaseSecretKey;
+  if (originalEnvironment.legacySupabaseKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  else process.env.SUPABASE_SERVICE_ROLE_KEY = originalEnvironment.legacySupabaseKey;
   rmSync(temporaryDirectory, { recursive: true, force: true });
 }

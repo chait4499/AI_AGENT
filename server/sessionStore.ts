@@ -23,17 +23,16 @@ class LocalDevelopmentSessionStore implements SessionStore {
 
 class SupabaseSessionStore implements SessionStore {
   private readonly url: string;
-  private readonly serviceRoleKey: string;
+  private readonly secretKey: string;
 
-  constructor(url: string, serviceRoleKey: string) {
+  constructor(url: string, secretKey: string) {
     this.url = url;
-    this.serviceRoleKey = serviceRoleKey;
+    this.secretKey = secretKey;
   }
 
   private get headers() {
     return {
-      apikey: this.serviceRoleKey,
-      Authorization: `Bearer ${this.serviceRoleKey}`,
+      apikey: this.secretKey,
       'Content-Type': 'application/json',
     };
   }
@@ -76,8 +75,8 @@ class SupabaseSessionStore implements SessionStore {
 
 export function getSessionStore(): SessionStore {
   const url = process.env.SUPABASE_URL?.replace(/\/$/, '');
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (url && serviceRoleKey) return new SupabaseSessionStore(url, serviceRoleKey);
+  const secretKey = process.env.SUPABASE_SECRET_KEY;
+  if (url && secretKey) return new SupabaseSessionStore(url, secretKey);
 
   const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
   if (isProduction) {
