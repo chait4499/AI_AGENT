@@ -37,6 +37,7 @@ export default function App() {
       <FeedbackView
         candidate={flow.candidate}
         feedback={flow.state.feedback}
+        observations={flow.state.observations}
         onReset={flow.reset}
       />
     );

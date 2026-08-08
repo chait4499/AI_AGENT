@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Candidate, InterviewState } from '../types';
 import { getInitials } from '../data';
+import { buildInterviewPath, explainCurrentQuestion } from '../evidence';
 import { Avatar, Button, Card, Spinner } from './ui';
 
 export function Interview({
@@ -26,6 +27,7 @@ export function Interview({
   const questionTurn = isCandidateTurn ? null : currentTurn;
 
   const transcript = state.turns;
+  const questionReason = explainCurrentQuestion(candidate, state.turns, state.observations);
 
   const handleSubmit = async () => {
     if (!answer.trim() || loading) return;
@@ -80,6 +82,15 @@ export function Interview({
                   <span className="hidden h-1 w-1 rounded-full bg-ink-300 sm:block" />
                   <span className="text-sm text-ink-500">Difficulty: {questionTurn.difficulty}</span>
                 </div>
+                {questionReason && (
+                  <details className="group mt-6 max-w-2xl rounded-xl border border-ink-200 bg-ink-50/80 px-4 py-3">
+                    <summary className="cursor-pointer list-none text-sm font-medium text-ink-600 outline-none transition-colors hover:text-accent-700 focus-visible:text-accent-700">
+                      <span>Why this question?</span>
+                      <span className="ml-2 inline-block text-ink-400 transition-transform group-open:rotate-180" aria-hidden="true">⌄</span>
+                    </summary>
+                    <p className="mt-3 border-t border-ink-200 pt-3 text-sm leading-6 text-ink-600">{questionReason}</p>
+                  </details>
+                )}
               </div>
 
               <div className="border-t border-ink-100 bg-ink-50/60 px-5 py-6 sm:px-8 sm:py-8 xl:px-10">
@@ -117,6 +128,7 @@ export function Interview({
         {/* Side panel */}
         <aside className="hidden lg:block">
           <SidePanel
+            candidate={candidate}
             state={state}
             transcript={transcript}
             loading={loading}
@@ -135,6 +147,7 @@ export function Interview({
         {showTranscript && (
           <div className="border-t border-ink-100 bg-ink-50 px-5 py-5">
             <SidePanel
+              candidate={candidate}
               state={state}
               transcript={transcript}
               loading={loading}
@@ -147,10 +160,12 @@ export function Interview({
 }
 
 function SidePanel({
+  candidate,
   state,
   transcript,
   loading,
 }: {
+  candidate: Candidate;
   state: InterviewState;
   transcript: { role: string; content: string; day?: number; topic?: string }[];
   loading: boolean;
@@ -179,6 +194,8 @@ function SidePanel({
         </div>
       </Card>
 
+      <InterviewPath candidate={candidate} state={state} />
+
       <Card className="p-5">
         <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-ink-400">Conversation</h2>
         <div className="mt-4 max-h-[430px] space-y-4 overflow-y-auto pr-1">
@@ -202,5 +219,37 @@ function SidePanel({
         </div>
       </Card>
     </div>
+  );
+}
+
+function InterviewPath({ candidate, state }: { candidate: Candidate; state: InterviewState }) {
+  const path = buildInterviewPath(candidate, state.turns, state.observations).slice(-5);
+  if (path.length === 0) return null;
+
+  return (
+    <Card className="p-5">
+      <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-ink-400">Interview path</h2>
+      <ol className="mt-4">
+        {path.map((item, index) => (
+          <li key={item.questionNumber}>
+            {index > 0 && item.label && (
+              <div className="flex items-center gap-2 py-2 pl-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-400">
+                <span aria-hidden="true">↓</span>
+                {item.label}
+              </div>
+            )}
+            <div className="rounded-xl border border-ink-100 bg-ink-50 px-3 py-2.5">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs font-semibold text-accent-700">Day {item.day}</span>
+                {index === 0 && item.label && (
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-400">{item.label}</span>
+                )}
+              </div>
+              <p className="mt-1 line-clamp-2 text-xs leading-5 text-ink-600">{item.topic}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </Card>
   );
 }

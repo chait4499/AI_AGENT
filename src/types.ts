@@ -66,6 +66,22 @@ export interface Feedback {
   next: string[];
 }
 
+export type AssessmentQuality = 'weak' | 'partial' | 'good' | 'strong';
+
+export interface AssessmentEvidence {
+  day: number;
+  quality: AssessmentQuality;
+  conceptsUnderstood: string[];
+  conceptsMissing: string[];
+}
+
+export interface InterviewObservation extends AssessmentEvidence {
+  answer: string;
+  questionNumber: number;
+  topic: string;
+  difficulty: Difficulty;
+}
+
 export interface InterviewState {
   sessionId: string;
   candidate: Candidate;
@@ -73,6 +89,7 @@ export interface InterviewState {
   currentIndex: number;
   coveredDays: number[];
   difficulty: Difficulty;
+  observations: InterviewObservation[];
   done: boolean;
   feedback: Feedback | null;
 }
@@ -94,4 +111,5 @@ export interface ApiResponse {
   };
   questionCount?: number;
   coveredDays?: number[];
+  observation?: AssessmentEvidence;
 }

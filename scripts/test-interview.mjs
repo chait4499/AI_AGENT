@@ -10,12 +10,14 @@ const temporaryDirectory = mkdtempSync(join(tmpdir(), 'interview-agent-test-'));
 const bundledHandler = join(temporaryDirectory, 'interview-api.mjs');
 const bundledEngine = join(temporaryDirectory, 'interview-engine.mjs');
 const bundledGemini = join(temporaryDirectory, 'gemini.mjs');
+const bundledEvidence = join(temporaryDirectory, 'evidence.mjs');
 const esbuild = join(projectRoot, 'node_modules/.bin/esbuild');
 
 for (const [entryPoint, output] of [
   [join(projectRoot, 'api/interview.ts'), bundledHandler],
   [join(projectRoot, 'server/interviewEngine.ts'), bundledEngine],
   [join(projectRoot, 'server/gemini.ts'), bundledGemini],
+  [join(projectRoot, 'src/evidence.ts'), bundledEvidence],
 ]) {
   execFileSync(esbuild, [entryPoint, '--bundle', '--platform=node', '--format=esm', `--outfile=${output}`]);
 }
@@ -29,6 +31,12 @@ const {
   initializeSession,
 } = await import(pathToFileURL(bundledEngine).href);
 const { DEFAULT_GEMINI_MODEL, getGeminiClient } = await import(pathToFileURL(bundledGemini).href);
+const {
+  buildInterviewPath,
+  buildSignalValidations,
+  explainCurrentQuestion,
+  findFeedbackEvidence,
+} = await import(pathToFileURL(bundledEvidence).href);
 
 class TestResponse {
   statusCode = 200;
@@ -146,6 +154,13 @@ try {
   })));
   assert.equal(weak.response.reply, weakReply);
   assert.equal(weak.response.question.day, weakStart.currentDay);
+  assert.deepEqual(weak.response.observation, {
+    day: weakStart.currentDay,
+    quality: 'weak',
+    conceptsUnderstood: ['embeddings are numeric representations'],
+    conceptsMissing: ['semantic distance'],
+  });
+  assert.equal('note' in weak.response.observation, false);
   assert.equal(weak.state.observations[0].quality, 'weak');
   assert.deepEqual(weak.state.observations[0].conceptsMissing, ['semantic distance']);
 
@@ -297,6 +312,85 @@ try {
   assert.match(currentGap.response.feedback.gaps.join(' '), /Day 10/);
   assert.match(currentGap.response.feedback.gaps.join(' '), /reranking failure modes/);
 
+  // Evidence and adaptation presentation logic uses current observations, never history alone.
+  const observedStrongDay10 = {
+    day: 10,
+    quality: 'strong',
+    conceptsUnderstood: ['hybrid retrieval strategy', 'reranking trade-offs'],
+    conceptsMissing: [],
+    answer: 'I would combine dense retrieval with metadata filters, then evaluate recall and reranking latency.',
+    questionNumber: 1,
+    topic: curriculumDay(10).title,
+    difficulty: 'Advanced',
+  };
+  const observedStrongDay16 = {
+    day: 16,
+    quality: 'good',
+    conceptsUnderstood: ['stateless API design', 'external session state'],
+    conceptsMissing: [],
+    answer: 'I would keep the API stateless and store session state externally.',
+    questionNumber: 2,
+    topic: curriculumDay(16).title,
+    difficulty: 'Advanced',
+  };
+  const observedPartialDay12 = {
+    day: 12,
+    quality: 'partial',
+    conceptsUnderstood: ['prompt structure'],
+    conceptsMissing: ['evaluation methodology'],
+    answer: 'I would structure the prompt with clear instructions, but I have not defined the evaluation method.',
+    questionNumber: 3,
+    topic: curriculumDay(12).title,
+    difficulty: 'Standard',
+  };
+  const validations = buildSignalValidations(candidate, [observedStrongDay10, observedStrongDay16, observedPartialDay12]);
+  assert.equal(validations.find((entry) => entry.day === 10).status, 'IMPROVEMENT VALIDATED');
+  assert.equal(validations.find((entry) => entry.day === 16).status, 'STRENGTH CONFIRMED');
+  assert.equal(validations.find((entry) => entry.day === 12).status, 'NEEDS REINFORCEMENT');
+  assert.deepEqual(buildSignalValidations(candidate, []), []);
+
+  const unrecordedDay = curriculumData.days.find((day) => !candidate.missions.some((mission) => mission.day === day.day));
+  assert.ok(unrecordedDay);
+  const unrecordedValidation = buildSignalValidations(candidate, [{
+    ...observedPartialDay12,
+    day: unrecordedDay.day,
+    topic: unrecordedDay.title,
+  }]);
+  assert.equal(unrecordedValidation[0].history, 'No recorded mission');
+  assert.equal(unrecordedValidation[0].status, 'NEEDS REINFORCEMENT');
+
+  const linkedEvidence = findFeedbackEvidence(
+    'Demonstrated a hybrid retrieval strategy with reranking trade-offs.',
+    'strength',
+    [observedStrongDay10, observedStrongDay16],
+  );
+  assert.ok(linkedEvidence);
+  assert.equal(linkedEvidence.excerpt, observedStrongDay10.answer);
+  assert.equal(observedStrongDay10.answer.includes(linkedEvidence.excerpt), true);
+  assert.equal(findFeedbackEvidence('Discussed unrelated deployment budgeting.', 'strength', [observedStrongDay10]), null);
+
+  const followUpTurns = [
+    { role: 'interviewer', content: 'How would you evaluate retrieval?', day: 10, topic: curriculumDay(10).title, difficulty: 'Standard' },
+    { role: 'candidate', content: observedPartialDay12.answer },
+    { role: 'interviewer', content: 'Which evaluation metric would you choose?', day: 10, topic: curriculumDay(10).title, difficulty: 'Standard' },
+  ];
+  const followUpObservation = { ...observedPartialDay12, day: 10, topic: curriculumDay(10).title, questionNumber: 1 };
+  assert.equal(buildInterviewPath(candidate, followUpTurns, [followUpObservation])[1].label, 'FOLLOW-UP');
+  assert.match(explainCurrentQuestion(candidate, followUpTurns, [followUpObservation]), /evaluation methodology/);
+
+  const deepenTurns = [
+    { role: 'interviewer', content: 'Explain retrieval fundamentals.', day: 10, topic: curriculumDay(10).title, difficulty: 'Standard' },
+    { role: 'candidate', content: observedStrongDay10.answer },
+    { role: 'interviewer', content: 'Now consider production failure modes.', day: 10, topic: curriculumDay(10).title, difficulty: 'Deep' },
+  ];
+  assert.equal(buildInterviewPath(candidate, deepenTurns, [observedStrongDay10])[1].label, 'DEEPEN');
+
+  const newTopicTurns = [
+    ...deepenTurns.slice(0, 2),
+    { role: 'interviewer', content: 'How would you validate tool arguments?', day: 13, topic: curriculumDay(13).title, difficulty: 'Advanced' },
+  ];
+  assert.equal(buildInterviewPath(candidate, newTopicTurns, [observedStrongDay10])[1].label, 'NEW TOPIC');
+
   // The 12-question ceiling prevents endless model-requested follow-ups once hard minimums are met.
   const cappedState = {
     ...eligibleForFinish(initializeSession('capped', candidate).state),
@@ -359,6 +453,8 @@ try {
   const adaptiveResponse = await request({ sessionId: adaptiveSession, message: 'It maps text to vectors.' });
   assertQuestion(adaptiveResponse);
   assert.equal(adaptiveResponse.body.reply, validGeminiTurn.reply);
+  assert.equal(adaptiveResponse.body.observation.quality, 'weak');
+  assert.equal('note' in adaptiveResponse.body.observation, false);
   assert.equal(geminiRequests.length, 1);
   assert.ok(geminiRequests[0].url.includes('gemini-test-override'));
   assert.ok(geminiRequests[0].options.headers['x-goog-api-key']);

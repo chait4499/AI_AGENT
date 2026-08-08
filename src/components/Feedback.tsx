@@ -1,17 +1,21 @@
-import type { Candidate, Feedback } from '../types';
+import type { Candidate, Feedback, InterviewObservation } from '../types';
 import { getInitials } from '../data';
+import { buildSignalValidations, findFeedbackEvidence, type ValidationStatus } from '../evidence';
 import { Avatar, Button, Card } from './ui';
 
 export function FeedbackView({
   candidate,
   feedback,
+  observations,
   onReset,
 }: {
   candidate: Candidate;
   feedback: Feedback;
+  observations: InterviewObservation[];
   onReset: () => void;
 }) {
   const m = candidate.member;
+  const validations = buildSignalValidations(candidate, observations);
 
   return (
     <div className="min-h-screen">
@@ -51,9 +55,34 @@ export function FeedbackView({
           <p className="px-5 py-6 text-base leading-8 text-ink-700 sm:px-7 sm:py-8 sm:text-lg">{feedback.summary}</p>
         </Card>
 
+        {validations.length > 0 && (
+          <Card className="mt-5 p-5 sm:p-7">
+            <div>
+              <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-ink-400">Learning signal validation</h2>
+              <p className="mt-2 text-sm leading-6 text-ink-500">Historical learning context compared with evidence observed in this interview.</p>
+            </div>
+            <div className="mt-6 divide-y divide-ink-100">
+              {validations.map((validation) => (
+                <div key={validation.day} className="grid gap-4 py-5 first:pt-0 last:pb-0 sm:grid-cols-[minmax(0,1.4fr)_1fr_1fr_1.3fr] sm:items-center">
+                  <div>
+                    <p className="text-xs font-semibold text-accent-700">Day {validation.day}</p>
+                    <p className="mt-1 text-sm font-medium leading-5 text-ink-800">{validation.topic}</p>
+                  </div>
+                  <ValidationDatum label="Learning journey" value={validation.history} />
+                  <ValidationDatum label="Live interview" value={validation.live} />
+                  <div>
+                    <p className="text-[11px] font-medium text-ink-400">Current signal</p>
+                    <ValidationBadge status={validation.status} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
         <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2">
-          <FeedbackList title="Strengths" items={feedback.strengths} icon="check" color="green" />
-          <FeedbackList title="Areas to strengthen" items={feedback.gaps} icon="alert" color="amber" />
+          <FeedbackList title="Strengths" items={feedback.strengths} icon="check" color="green" kind="strength" observations={observations} />
+          <FeedbackList title="Areas to strengthen" items={feedback.gaps} icon="alert" color="amber" kind="gap" observations={observations} />
         </div>
 
         <Card className="mt-5 p-5 sm:p-7">
@@ -85,11 +114,15 @@ function FeedbackList({
   items,
   icon,
   color,
+  kind,
+  observations,
 }: {
   title: string;
   items: string[];
   icon: 'check' | 'alert';
   color: 'green' | 'amber';
+  kind: 'strength' | 'gap';
+  observations: InterviewObservation[];
 }) {
   const palette = color === 'green'
     ? { icon: 'text-emerald-600', background: 'bg-emerald-50', border: 'border-t-emerald-500' }
@@ -109,10 +142,62 @@ function FeedbackList({
             ) : (
               <span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${palette.background} ${palette.icon}`} aria-hidden="true">△</span>
             )}
-            <span className="text-sm leading-6 text-ink-700 sm:text-[15px]">{item}</span>
+            <div className="min-w-0 flex-1">
+              <span className="text-sm leading-6 text-ink-700 sm:text-[15px]">{item}</span>
+              <EvidenceDisclosure item={item} kind={kind} observations={observations} />
+            </div>
           </li>
         ))}
       </ul>
     </Card>
+  );
+}
+
+function ValidationDatum({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-[11px] font-medium text-ink-400">{label}</p>
+      <p className="mt-1 text-sm font-medium text-ink-700">{value}</p>
+    </div>
+  );
+}
+
+function ValidationBadge({ status }: { status: ValidationStatus }) {
+  const styles: Record<ValidationStatus, string> = {
+    'STRENGTH CONFIRMED': 'bg-emerald-50 text-emerald-700',
+    'IMPROVEMENT VALIDATED': 'bg-emerald-50 text-emerald-700',
+    'NEEDS REINFORCEMENT': 'bg-amber-50 text-amber-700',
+    'CURRENTLY INCONCLUSIVE': 'bg-ink-100 text-ink-600',
+  };
+  const symbol = status === 'NEEDS REINFORCEMENT' ? '△' : status === 'CURRENTLY INCONCLUSIVE' ? '○' : '✓';
+  return (
+    <span className={`mt-1.5 inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[10px] font-semibold tracking-[0.08em] ${styles[status]}`}>
+      <span aria-hidden="true">{symbol}</span> {status}
+    </span>
+  );
+}
+
+function EvidenceDisclosure({
+  item,
+  kind,
+  observations,
+}: {
+  item: string;
+  kind: 'strength' | 'gap';
+  observations: InterviewObservation[];
+}) {
+  const evidence = findFeedbackEvidence(item, kind, observations);
+  if (!evidence) return null;
+  return (
+    <details className="group mt-2 rounded-lg border border-ink-100 bg-ink-50 px-3 py-2">
+      <summary className="cursor-pointer list-none text-xs font-medium text-accent-700 outline-none focus-visible:underline">
+        View evidence <span className="inline-block text-ink-400 transition-transform group-open:rotate-180" aria-hidden="true">⌄</span>
+      </summary>
+      <div className="mt-2 border-t border-ink-200 pt-2">
+        <p className="text-[11px] font-semibold text-ink-500">Day {evidence.day} · Question {evidence.questionNumber}</p>
+        <p className="mt-1 text-[11px] text-ink-400">{evidence.topic}</p>
+        <p className="mt-2 text-xs leading-5 text-ink-600"><span className="font-medium text-ink-700">Candidate evidence:</span> “{evidence.excerpt}”</p>
+      </div>
+    </details>
   );
 }

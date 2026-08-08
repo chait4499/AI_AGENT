@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import type { ApiRequest, ApiResponse, Candidate, InterviewState, Turn, View } from './types';
+import type { ApiRequest, ApiResponse, Candidate, InterviewObservation, InterviewState, Turn, View } from './types';
 
 function generateSessionId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -63,6 +63,7 @@ export function useInterviewFlow() {
         currentIndex: (response.questionCount ?? 1) - 1,
         coveredDays: response.coveredDays ?? [firstTurn.day as number],
         difficulty: firstTurn.difficulty ?? 'Standard',
+        observations: [],
         done: false,
         feedback: null,
       });
@@ -83,6 +84,16 @@ export function useInterviewFlow() {
       try {
         const response = await postInterview({ sessionId: state.sessionId, message: answer.trim() });
         const candidateTurn: Turn = { role: 'candidate', content: answer.trim() };
+        const currentQuestion = [...state.turns].reverse().find((turn) => turn.role === 'interviewer');
+        const observation: InterviewObservation | null = response.observation && currentQuestion?.day && currentQuestion.topic
+          ? {
+              ...response.observation,
+              answer: answer.trim(),
+              questionNumber: state.currentIndex + 1,
+              topic: currentQuestion.topic,
+              difficulty: currentQuestion.difficulty ?? state.difficulty,
+            }
+          : null;
 
         if (response.done) {
           if (!response.feedback) throw new Error('The completed interview did not return feedback.');
@@ -91,6 +102,7 @@ export function useInterviewFlow() {
             turns: [...previous.turns, candidateTurn],
             currentIndex: (response.questionCount ?? previous.currentIndex + 1) - 1,
             coveredDays: response.coveredDays ?? previous.coveredDays,
+            observations: observation ? [...previous.observations, observation] : previous.observations,
             done: true,
             feedback: response.feedback as NonNullable<ApiResponse['feedback']>,
           } : previous);
@@ -105,6 +117,7 @@ export function useInterviewFlow() {
           currentIndex: (response.questionCount ?? previous.currentIndex + 2) - 1,
           coveredDays: response.coveredDays ?? previous.coveredDays,
           difficulty: nextTurn.difficulty ?? previous.difficulty,
+          observations: observation ? [...previous.observations, observation] : previous.observations,
         } : previous);
         return true;
       } catch (caught) {

@@ -1854,3 +1854,530 @@ Tests performed:
 - Browser-based visual QA could not run because no browser surface was available; responsive and accessibility behavior was reviewed in source.
 
 No backend, Gemini, Supabase, API-contract, session-flow, organizer-data, interview-intelligence, dependency, or unrelated test files were changed. No secret values were added to source, logs, PROMPTS.md, or Git.
+
+## Prompt 09 — Evidence and Adaptation Layer
+
+Tool: Codex
+
+Purpose:
+Make candidate personalization, adaptive interviewing, and feedback evidence visible and explainable without changing core interview intelligence.
+
+Full prompt:
+
+PROMPT 09 — Evidence & Adaptation Layer
+
+We are doing one final product-enhancement pass on the existing Interview Agent before deployment.
+
+The current project already has:
+- polished modern UI
+- candidate learning profiles
+- 31-day learning journey visualization
+- Gemini-powered adaptive technical interviewing
+- intelligent follow-ups
+- dynamic difficulty
+- Supabase session persistence
+- interview-grounded final feedback
+- minimum 8 questions
+- minimum 4 curriculum days
+- deterministic fallback
+- working tests/build
+
+IMPORTANT:
+Do NOT redesign the application again.
+Do NOT add broad new features.
+
+This task should make the existing personalization and adaptivity VISIBLE and EXPLAINABLE to judges.
+
+The product thesis is:
+
+"Learning history tells us where to look.
+The interview tells us what they know now."
+
+==================================================
+GOAL
+==================================================
+
+Add a lightweight Evidence & Adaptation Layer that clearly shows:
+
+1. why a topic/question was selected
+2. how the interview adapted
+3. how historical learning signals compare with live interview evidence
+4. what evidence supports final strengths/gaps
+
+Do this WITHOUT exposing hidden chain-of-thought or private model reasoning.
+
+Use only structured signals already available or safely derived from:
+- candidate mission history
+- curriculum day
+- question metadata
+- assessment quality
+- concepts understood/missing
+- transcript
+- interview observations
+
+==================================================
+1. "WHY THIS QUESTION?" DURING INTERVIEW
+==================================================
+
+On the Live Interview screen, add a subtle expandable element near the question metadata:
+
+Why this question? ▾
+
+It should reveal a SHORT deterministic explanation based on structured state.
+
+Examples:
+
+Historical probe:
+"Day 12 required multiple learning attempts, so the interview is validating current understanding."
+
+First-try validation:
+"Day 16 was completed on the first attempt, so the interview is validating this as a potential strength."
+
+Adaptive follow-up:
+"The previous response was incomplete on evaluation methodology, so this follow-up probes that gap."
+
+Depth increase:
+"The previous response demonstrated the fundamentals, so the interview is increasing the depth."
+
+New topic:
+"The interview is expanding coverage to another relevant curriculum area."
+
+Do NOT expose:
+- chain-of-thought
+- internal Gemini prompt
+- hidden reasoning
+- confidence tokens
+- raw model output
+
+Keep explanations concise and professional.
+
+If the current architecture does not expose enough structured state to produce an accurate explanation, implement the smallest safe internal metadata addition necessary.
+
+CRITICAL:
+Do not break the organizer-required POST /api/interview contract.
+
+Required fields and behavior must remain compatible.
+
+Avoid changing the external response shape unless the current app already supports optional presentation metadata safely.
+
+Prefer deriving explanations from existing client/session state when possible.
+
+==================================================
+2. ADAPTIVE INTERVIEW PATH
+==================================================
+
+Improve the interview sidebar so judges can see the adaptation path.
+
+Add a compact section:
+
+INTERVIEW PATH
+
+Example:
+
+Day 12 · Prompt Engineering
+Probe
+
+↓ Follow-up
+
+Day 12 · Prompt Evaluation
+Deepen
+
+↓ New topic
+
+Day 13 · Function Calling
+Validate
+
+↓ New topic
+
+Day 16 · Chatbot Backend
+Validate
+
+The visualization should remain compact.
+
+Possible transition labels:
+
+PROBE
+VALIDATE
+FOLLOW-UP
+DEEPEN
+NEW TOPIC
+
+Do not fabricate labels.
+
+Derive them from structured interview state.
+
+Examples:
+
+FOLLOW-UP:
+same curriculum day after weak/partial answer
+
+DEEPEN:
+same curriculum day after good/strong answer with higher difficulty
+
+NEW TOPIC:
+curriculum day changes
+
+PROBE:
+historically difficult area being tested
+
+VALIDATE:
+historical strength being checked
+
+If a transition cannot be confidently categorized, omit the label rather than guessing.
+
+Do not make this a large flowchart.
+
+Keep it visually consistent with the current clean UI.
+
+==================================================
+3. LEARNING JOURNEY → LIVE INTERVIEW VALIDATION
+==================================================
+
+On the final Feedback screen, add a new section:
+
+LEARNING SIGNAL VALIDATION
+
+This should compare historical learning signals with CURRENT interview evidence.
+
+Example:
+
+DAY 10
+Retrieval & Matching Engine
+
+Learning journey
+4 attempts
+
+Live interview
+Strong
+
+Current signal
+✓ Improvement validated
+
+
+Another example:
+
+DAY 12
+Prompt Engineering
+
+Learning journey
+5 attempts
+
+Live interview
+Partial
+
+Current signal
+△ Needs reinforcement
+
+
+Another:
+
+DAY 16
+Chatbot Backend
+
+Learning journey
+First-try pass
+
+Live interview
+Strong
+
+Current signal
+✓ Strength confirmed
+
+Only include curriculum days that were actually covered in the interview and have enough evidence.
+
+Use actual observations/assessments.
+
+Never infer "Strong" solely from historical learning data.
+
+==================================================
+VALIDATION STATUS RULES
+==================================================
+
+Use deterministic presentation logic based on current interview observations.
+
+Historical performance must NOT override current interview evidence.
+
+Possible statuses:
+
+STRENGTH CONFIRMED
+Use when:
+- historical first-try/strong signal exists
+- AND live answer evidence is good/strong
+
+IMPROVEMENT VALIDATED
+Use when:
+- historically difficult/high-attempt/failed area
+- AND current live evidence is good/strong
+
+NEEDS REINFORCEMENT
+Use when:
+- current interview evidence remains weak/partial
+- regardless of historical success
+
+CURRENTLY INCONCLUSIVE
+Use only when:
+- evidence is genuinely mixed or insufficient
+
+Do not create fake numeric scores.
+
+Do not show percentages.
+
+==================================================
+4. EVIDENCE-LINKED FEEDBACK
+==================================================
+
+Where reasonably possible, make feedback strengths and gaps traceable to the interview evidence.
+
+For each strength/gap, provide a subtle:
+
+View evidence
+
+interaction.
+
+When expanded, show a concise relevant excerpt or supporting interview turn.
+
+Example:
+
+Strength
+Designed a stateless FastAPI architecture using Redis-backed state and concurrency controls.
+
+Day 16 · Question 4
+View evidence ▾
+
+Candidate evidence:
+"I'd keep FastAPI stateless and store conversation history in an external session store..."
+
+IMPORTANT:
+Do not fabricate mappings.
+
+Only link evidence when there is a reliable connection to:
+- curriculum day
+- observation
+- transcript turn
+- concept
+
+If an existing feedback string cannot safely be mapped to a specific response, leave it without an evidence link.
+
+Do NOT ask Gemini to regenerate feedback just to create UI mappings if avoidable.
+
+Prefer the structured observations already stored during the interview.
+
+==================================================
+5. PRODUCT COPY
+==================================================
+
+Add this product idea somewhere subtle and appropriate, likely candidate profile or feedback:
+
+Learning history tells us where to look.
+The interview tells us what they know now.
+
+Do not repeat it everywhere.
+
+Keep the product copy concise.
+
+==================================================
+6. VISUAL STYLE
+==================================================
+
+Preserve the current Prompt 08 design system.
+
+The new UI should feel native to the existing interface.
+
+Use:
+- subtle bordered panels
+- small status labels
+- restrained green/amber/red
+- clear hierarchy
+- compact disclosure interactions
+- clean typography
+
+Avoid:
+- giant charts
+- complex dashboards
+- excessive animation
+- gamification
+- numeric scoring
+- decorative AI graphics
+
+==================================================
+7. DATA INTEGRITY
+==================================================
+
+This is critical.
+
+Do NOT:
+- treat unlisted missions as failed
+- treat historical attempts as current gaps
+- fabricate assessment evidence
+- invent transcript quotes
+- invent curriculum days
+- invent candidate performance
+- modify organizer candidate JSON
+- modify organizer curriculum JSON
+
+Live interview evidence has priority over historical learning difficulty.
+
+==================================================
+8. API / BACKEND SAFETY
+==================================================
+
+Preserve:
+- POST /api/interview
+- sessionId behavior
+- required start request
+- required continuation request
+- done:false behavior
+- done:true feedback object
+- exact required feedback keys:
+  summary
+  strengths
+  gaps
+  next
+
+Do not introduce breaking API changes.
+
+If internal metadata is needed for UI explainability, implement it in the smallest backwards-compatible way possible.
+
+Do not add another database.
+
+Do not add RAG.
+
+Do not add Breeth.
+
+Do not add new external services.
+
+Do not alter Gemini authentication/model configuration.
+
+==================================================
+9. LIVE STEER SIMPLICITY
+==================================================
+
+Keep implementation understandable and modular.
+
+This project may be modified live during judging.
+
+Avoid:
+- unnecessary abstractions
+- large state-management libraries
+- complex event systems
+- new frameworks
+
+Use the current architecture.
+
+==================================================
+10. TESTING
+==================================================
+
+Add focused tests for new deterministic logic where appropriate.
+
+Verify:
+
+1. historically difficult + current strong => Improvement validated
+2. historical strength + current strong => Strength confirmed
+3. current weak/partial => Needs reinforcement
+4. history alone cannot create a current gap/status
+5. unrecorded days are not considered failures
+6. evidence excerpts come from actual transcript content
+7. no fabricated evidence mapping
+8. same-day weak/partial response can display FOLLOW-UP
+9. same-day strong response with increased depth can display DEEPEN where state supports it
+10. curriculum-day change can display NEW TOPIC
+11. required /api/interview behavior remains intact
+
+Run:
+
+npm run test:interview
+npm run build
+
+Do not alter tests merely to hide failures.
+
+==================================================
+11. PROMPTS.md
+==================================================
+
+Append this ENTIRE prompt to PROMPTS.md as:
+
+Prompt 09 — Evidence and Adaptation Layer
+Tool: Codex
+
+Purpose:
+Make candidate personalization, adaptive interviewing, and feedback evidence visible and explainable without changing core interview intelligence.
+
+Include:
+- full prompt
+- implementation summary
+- files changed
+- tests
+- build result
+
+Never overwrite previous entries.
+
+Never include:
+- GEMINI_API_KEY
+- SUPABASE_SECRET_KEY
+- API secrets
+- environment-variable values
+
+==================================================
+12. GIT
+==================================================
+
+Before committing:
+
+- inspect git diff
+- confirm .env.local is ignored
+- confirm no secrets are staged
+- confirm organizer data is unchanged
+- confirm Gemini/Supabase behavior was not unintentionally altered
+
+If tests/build pass, commit with:
+
+Add interview evidence and adaptation insights
+
+Push to origin/main.
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+Report:
+
+- files changed
+- Why This Question implementation
+- interview-path implementation
+- learning-signal validation implementation
+- evidence-link implementation
+- whether API/backend behavior changed
+- tests
+- build
+- commit hash
+- push status
+- any limitations where evidence was intentionally omitted rather than fabricated
+
+Do NOT deploy in this task.
+
+Do NOT add any additional features beyond this scope.
+
+Implementation summary:
+- Added a safe optional assessment-observation field to interview responses and collected it in existing client session state without exposing prompts, internal notes, or raw model output.
+- Added deterministic helpers for concise question explanations, PROBE/VALIDATE/FOLLOW-UP/DEEPEN/NEW TOPIC path labels, learning-signal validation, and conservative transcript-evidence matching.
+- Added expandable Why this question and View evidence interactions, a compact Interview path sidebar, learning-signal validation on the report, and the product-thesis copy on the candidate profile.
+- Omitted explanations and evidence links whenever the available structured signals could not support them reliably.
+
+Files changed:
+- server/interviewEngine.ts
+- scripts/test-interview.mjs
+- src/App.tsx
+- src/components/Brief.tsx
+- src/components/Feedback.tsx
+- src/components/Interview.tsx
+- src/evidence.ts
+- src/types.ts
+- src/useInterviewFlow.ts
+- PROMPTS.md
+
+Tests performed:
+- `npm run test:interview` — passed existing API/adaptive tests plus deterministic evidence, validation-status, excerpt-integrity, and path-label coverage.
+- `npm run build` — passed TypeScript and Vite production build.
+
+The POST request contract and required feedback keys remain unchanged. The response may include optional safe observation metadata when a current assessment exists. Gemini authentication/model behavior, Supabase persistence, organizer data, and secret handling were not changed.

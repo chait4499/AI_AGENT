@@ -91,6 +91,9 @@ export function Brief({
               <p className="mt-1 max-w-3xl text-sm leading-6 text-ink-500">
                 Questions will prioritize areas that required multiple attempts, validate first-try strengths, and adapt based on live responses.
               </p>
+              <p className="mt-3 text-sm font-medium text-accent-700">
+                Learning history tells us where to look. The interview tells us what they know now.
+              </p>
             </div>
           </div>
         </Card>

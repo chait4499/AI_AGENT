@@ -1,5 +1,5 @@
 import curriculumData from '../data/raw/curriculum.json' with { type: 'json' };
-import type { ApiResponse, Candidate, Curriculum, CurriculumDay, Difficulty, Feedback, Turn } from '../src/types.ts';
+import type { ApiResponse, AssessmentEvidence, Candidate, Curriculum, CurriculumDay, Difficulty, Feedback, Turn } from '../src/types.ts';
 
 export const MIN_INTERVIEW_QUESTIONS = 8;
 export const MAX_INTERVIEW_QUESTIONS = 12;
@@ -131,7 +131,17 @@ function buildQuestion(dayNumber: number, transcript: Turn[]): { content: string
   return { content, day, difficulty: difficultyFor(day) };
 }
 
-function responseForQuestion(state: SessionState, question: Turn): ApiResponse {
+function publicObservation(observation: AssessmentObservation | undefined): AssessmentEvidence | undefined {
+  if (!observation) return undefined;
+  return {
+    day: observation.day,
+    quality: observation.quality,
+    conceptsUnderstood: observation.conceptsUnderstood,
+    conceptsMissing: observation.conceptsMissing,
+  };
+}
+
+function responseForQuestion(state: SessionState, question: Turn, observation?: AssessmentObservation): ApiResponse {
   return {
     reply: question.content,
     done: false,
@@ -142,6 +152,7 @@ function responseForQuestion(state: SessionState, question: Turn): ApiResponse {
     },
     questionCount: state.questionCount,
     coveredDays: state.coveredDays,
+    ...(observation ? { observation: publicObservation(observation) } : {}),
   };
 }
 
@@ -292,7 +303,11 @@ async function safeAssessment(ai: AdaptiveInterviewAI | null, state: SessionStat
   }
 }
 
-async function finishSession(state: SessionState, ai: AdaptiveInterviewAI | null): Promise<{ state: SessionState; response: ApiResponse }> {
+async function finishSession(
+  state: SessionState,
+  ai: AdaptiveInterviewAI | null,
+  observation?: AssessmentObservation,
+): Promise<{ state: SessionState; response: ApiResponse }> {
   state.done = true;
   let feedback: Feedback | null = null;
   if (ai) {
@@ -308,6 +323,7 @@ async function finishSession(state: SessionState, ai: AdaptiveInterviewAI | null
       reply: 'Interview completed.',
       done: true,
       feedback: feedback ?? buildFallbackFeedback(state),
+      ...(observation ? { observation: publicObservation(observation) } : {}),
     },
   };
 }
@@ -327,13 +343,14 @@ export async function continueSession(
   if (adaptive) {
     updated.observations.push({ day: updated.currentDay, ...adaptive.assessment });
   }
+  const currentObservation = adaptive ? updated.observations[updated.observations.length - 1] : undefined;
 
   const minimumMet = updated.questionCount >= MIN_INTERVIEW_QUESTIONS && updated.coveredDays.length >= 4;
   const modelRequestedFinish = adaptive?.decision.action === 'finish';
   const fallbackShouldFinish = !adaptive && minimumMet;
   const maximumReached = updated.questionCount >= MAX_INTERVIEW_QUESTIONS && minimumMet;
   if ((modelRequestedFinish && minimumMet) || fallbackShouldFinish || maximumReached) {
-    return finishSession(updated, ai);
+    return finishSession(updated, ai, currentObservation);
   }
 
   const nextTurn = adaptive
@@ -346,5 +363,5 @@ export async function continueSession(
   updated.currentTopic = nextTurn.topic as string;
   updated.askedQuestions = [...updated.askedQuestions, nextTurn.content];
 
-  return { state: updated, response: responseForQuestion(updated, nextTurn) };
+  return { state: updated, response: responseForQuestion(updated, nextTurn, currentObservation) };
 }
