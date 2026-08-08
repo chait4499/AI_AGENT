@@ -1,3 +1,358 @@
+> Historical note: Prompts 01–03 are reconstructed from the early build conversation and Git commit history because the original early AI prompts were not preserved in PROMPTS.md at the time. Their implementation summaries and affected features are grounded in the repository history; they are not presented as verbatim transcripts.
+
+# Prompt 01 — Initial Interview Agent Frontend
+
+Tool: Bolt
+
+Purpose:
+Build the first working frontend prototype for the ViCODATHON Interview Agent challenge using the organizer-provided candidate and curriculum data.
+
+Historical status:
+Reconstructed from the early build and Git history. The exact original Bolt wording was not preserved.
+
+Full prompt reconstruction:
+
+Build a clean, professional web application for the ViCODATHON "Interview Agent" challenge.
+
+The product should conduct personalized technical interviews based on a candidate's 31-day AI engineering learning journey.
+
+For this first version, focus on the frontend experience only.
+
+Use the supplied:
+- candidates JSON
+- curriculum JSON
+
+Do not modify the organizer data.
+
+Create the project using React, TypeScript and Vite.
+
+The interface should be clean, minimal and professional rather than looking like a generic chatbot.
+
+The initial flow should be:
+
+Candidate Selection
+→ Candidate Learning Profile
+→ Technical Interview
+→ Interview Feedback
+
+CANDIDATE SELECTION
+
+Display all candidates from the supplied JSON.
+
+Each candidate should show:
+- name
+- current role
+- years of experience
+- education
+- missions completed
+- first-try mission count
+
+Include search by candidate name or role.
+
+Selecting a candidate should open their learning profile.
+
+CANDIDATE PROFILE
+
+Show:
+- candidate identity
+- missions completed
+- active/commit days
+- first-try passes
+- learning journey across the 31-day curriculum
+
+Derive useful interviewer signals from mission history.
+
+Group relevant missions into concepts such as:
+- strong signals
+- areas worth probing
+- explicitly skipped missions
+
+Do not treat curriculum days that are absent from the candidate's mission list as failed.
+
+INTERVIEW SCREEN
+
+Create a technical interview screen with:
+- current curriculum day
+- topic
+- difficulty
+- current question
+- answer textarea
+- submit button
+- interview progress
+- covered curriculum days
+- conversation transcript
+
+For this frontend prototype, use mocked questions.
+
+Use approximately 8 questions spanning multiple curriculum topics so the complete experience can be demonstrated before a real AI backend exists.
+
+FEEDBACK SCREEN
+
+After the mocked interview, display:
+- summary
+- strengths
+- knowledge gaps
+- recommended next steps
+
+This is only placeholder/mock feedback for demonstrating the complete product flow.
+
+Do not add:
+- authentication
+- voice
+- video
+- user accounts
+- complex dashboards
+- unnecessary frameworks
+
+Keep the architecture simple enough to replace the mocked interview with a real backend later.
+
+Implementation summary:
+- Created the React/TypeScript/Vite Interview Agent frontend.
+- Added Candidate Selection, Candidate Brief, Live Interview and Feedback screens.
+- Connected the frontend to the organizer-provided candidate and curriculum JSON.
+- Added candidate search and reusable UI components.
+- Established the state-driven four-screen product flow.
+
+Relevant initial frontend files:
+- src/App.tsx
+- src/components/Selection.tsx
+- src/components/Brief.tsx
+- src/components/Interview.tsx
+- src/components/Feedback.tsx
+- src/components/ui.tsx
+- src/data.ts
+- src/types.ts
+- src/useInterviewFlow.ts
+- src/index.css
+- src/main.tsx
+- package.json
+- vite.config.ts
+- tailwind.config.js
+- tsconfig.json
+- index.html
+
+Historical verification:
+This entry represents the first complete React/Vite Interview Agent frontend visible in the repository history.
+
+==================================================
+4. PROMPT 02
+==================================================
+
+Insert this entry immediately after Prompt 01:
+
+# Prompt 02 — Learning-Aware Mock Interview Experience
+
+Tool: Bolt
+
+Purpose:
+Make the initial Interview Agent prototype demonstrate learning-aware personalization and a complete mock interview journey before integrating a real AI backend.
+
+Historical status:
+Reconstructed from the early frontend state and Git history. The exact original Bolt wording was not preserved.
+
+Full prompt reconstruction:
+
+Improve the initial Interview Agent prototype so the candidate's learning journey visibly influences the interview experience.
+
+Continue using the organizer-provided candidate and curriculum JSON as the source of truth.
+
+Do not add a backend or real LLM yet.
+
+CANDIDATE LEARNING PROFILE
+
+For the selected candidate, derive useful interview signals from their missions.
+
+Show:
+- stronger learning areas
+- areas that required more attempts and should be probed
+- explicitly skipped missions
+- a visual 31-day learning-history representation
+
+The purpose is for the interviewer to appear informed about the candidate before the interview starts.
+
+MOCK INTERVIEW
+
+Create a complete mocked technical interview experience with approximately 8 questions.
+
+Questions should be tied to real curriculum topics.
+
+Each question should carry:
+- curriculum day
+- topic
+- difficulty
+
+Show:
+- progress
+- curriculum days covered
+- conversation transcript
+- answer input
+
+Answers do not need to be intelligently evaluated yet.
+
+Use a small artificial delay after answer submission so the interaction feels like an interview while the real AI backend is still pending.
+
+MOCK FEEDBACK
+
+After the final question, transition to the Feedback screen.
+
+Display the final report structure that the eventual AI backend will populate:
+
+- summary
+- strengths
+- gaps
+- next steps
+
+Keep this implementation replaceable so the mock question array and mock feedback can later be replaced by the required POST /api/interview backend.
+
+Do not over-engineer the architecture.
+
+Implementation summary:
+- Added an approximately 8-question mocked curriculum interview.
+- Added question day/topic/difficulty metadata.
+- Added transcript and covered-day tracking.
+- Added mocked completion and feedback behavior.
+- Created the frontend architecture that could later be replaced by API-driven interview progression.
+
+Relevant implementation:
+- src/useInterviewFlow.ts
+- src/components/Interview.tsx
+- src/components/Feedback.tsx
+- src/components/Brief.tsx
+- src/data.ts
+- src/types.ts
+
+Historical verification:
+The pre-backend repository used a fixed mocked question sequence, local/mock session progression, simulated answer-processing delay, transcript progression and static/mock feedback before Prompt 04 replaced this with the real API.
+
+==================================================
+5. PROMPT 03
+==================================================
+
+Insert this entry immediately after Prompt 02:
+
+# Prompt 03 — Candidate Learning Profile Correctness
+
+Tool: Codex
+
+Purpose:
+Correct candidate-history interpretation and remove unsupported claims from the pre-AI mock interview before building the real backend.
+
+Historical status:
+Reconstructed from the implementation commit and early project discussion. The implementation details are directly supported by Git history.
+
+Full prompt reconstruction:
+
+Before implementing the real backend, audit the existing Interview Agent frontend against the organizer-provided candidate JSON.
+
+There are correctness issues in how candidate mission history is currently being interpreted.
+
+Fix these issues without redesigning the UI or adding the AI backend yet.
+
+1. FIRST-TRY CLASSIFICATION
+
+A mission should only be labeled:
+
+"Passed first try"
+
+when:
+
+passed === true
+AND
+attempts === 1
+
+Do not classify a 2-attempt pass as first-try.
+
+2. HIGH-ATTEMPT / PROBING CLASSIFICATION
+
+A successfully completed mission should be considered an area worth probing when it required 3 or more attempts.
+
+Use:
+
+passed === true
+AND
+attempts >= 3
+
+Failed missions should also remain probing areas.
+
+A 2-attempt successful mission should not falsely appear as a first-try strength.
+
+3. SKIPPED VS UNLISTED
+
+Explicitly skipped missions and curriculum days that are not listed in a candidate's mission history are different states.
+
+Do not combine:
+
+Skipped
+
+with:
+
+Not listed / no recorded mission
+
+Update the candidate-learning-history legend so these states are visibly distinct.
+
+Unlisted curriculum days must not be interpreted as failures.
+
+4. REMOVE UNSUPPORTED QUESTION CLAIMS
+
+The current mock questions contain candidate-specific introductory claims that are not always supported by the selected candidate's actual data.
+
+Examples include statements such as:
+
+"You completed the Embeddings mission on your first try..."
+
+or:
+
+"You needed several attempts..."
+
+when the mock interview is reused for a different candidate.
+
+Remove those unsupported assertions from the fixed mock question text.
+
+Keep the technical question itself.
+
+5. REMOVE HARDCODED CANDIDATE FEEDBACK
+
+The mock feedback currently contains conclusions written for one candidate even when another candidate is selected.
+
+Remove this behavior.
+
+Until the AI backend is implemented:
+
+- use the selected candidate's actual name
+- clearly state that the current frontend mock does not evaluate submitted answers
+- do not invent strengths or weaknesses from candidate responses
+- keep placeholder feedback conservative
+
+6. PRESERVE CURRENT PRODUCT FLOW
+
+Do not add:
+- Gemini
+- Supabase
+- API backend
+- new dependencies
+- unrelated UI redesign
+
+This is a data-integrity and correctness pass only.
+
+Run the project build after making the fixes.
+
+Implementation summary:
+- Corrected first-try classification to require exactly one attempt.
+- Changed high-attempt/probing behavior to use three or more attempts.
+- Separated explicitly skipped curriculum days from unlisted/no-recorded days.
+- Removed unsupported candidate-history claims from fixed mock interview questions.
+- Removed hardcoded candidate-specific final feedback.
+- Made mock feedback candidate-aware while explicitly stating that answers were not yet evaluated.
+
+Files changed:
+- src/data.ts
+- src/components/Brief.tsx
+- src/useInterviewFlow.ts
+
+Historical verification:
+- Commit: 8af0608
+- Commit message: Fix candidate learning profile logic
+
 Prompt 04 — Real API and Session Foundation
 Tool: Codex
 Purpose: Replace mocked interview progression with the required POST /api/interview contract and session-based backend.
@@ -4323,3 +4678,621 @@ Tests and builds:
 - Emitted `api/interview.js` uses explicit `.js` imports, no emitted runtime JavaScript references the three forbidden `.ts` paths, and a direct Node import of the generated API entry succeeded.
 
 No secrets or environment-variable values were logged or committed.
+
+# Prompt 15 — Restore Missing Early AI Usage Log
+
+Tool: Codex
+
+Purpose:
+Transparently reconstruct missing Prompts 01–03 from repository history while preserving the existing Prompt 04–14 usage log.
+
+Full prompt:
+
+PROMPT 15 — Restore Missing Early AI Usage Log
+
+We need to repair PROMPTS.md before hackathon submission.
+
+IMPORTANT:
+This is an AI-usage-log documentation repair only.
+
+Do NOT modify application code, backend logic, frontend logic, dependencies, configuration, organizer data, environment variables, or deployment settings.
+
+==================================================
+BACKGROUND
+==================================================
+
+The current PROMPTS.md begins at:
+
+Prompt 04 — Real API and Session Foundation
+
+Prompts 01, 02 and 03 were not preserved in PROMPTS.md during the early build phase.
+
+We must restore them honestly.
+
+CRITICAL AUTHENTICITY RULE:
+
+Do NOT claim that Prompts 01–03 below are verbatim original prompts.
+
+They are HISTORICAL RECONSTRUCTIONS based on:
+- repository Git history
+- early implementation state
+- files introduced in the first frontend build
+- the candidate-learning correctness commit
+- known development progression
+
+The goal is transparency, not pretending we possess missing exact transcripts.
+
+==================================================
+1. INSPECT HISTORY FIRST
+==================================================
+
+Before editing PROMPTS.md, inspect relevant Git history.
+
+At minimum inspect:
+
+git log --oneline --reverse
+
+and relevant commits around:
+
+- initial PROMPTS.md creation
+- organizer JSON addition
+- first complete React/Vite Interview Agent frontend
+- commit 8af0608 ("Fix candidate learning profile logic")
+
+Inspect diffs/files where useful.
+
+Verify that the reconstruction below is compatible with the repository history.
+
+Do not invent additional historical features.
+
+==================================================
+2. INSERT HISTORICAL NOTE
+==================================================
+
+At the VERY TOP of PROMPTS.md, before Prompt 01, add exactly this note:
+
+> Historical note: Prompts 01–03 are reconstructed from the early build conversation and Git commit history because the original early AI prompts were not preserved in PROMPTS.md at the time. Their implementation summaries and affected features are grounded in the repository history; they are not presented as verbatim transcripts.
+
+Then insert Prompts 01, 02 and 03 in that order.
+
+==================================================
+3. PROMPT 01
+==================================================
+
+Insert this entry:
+
+# Prompt 01 — Initial Interview Agent Frontend
+
+Tool: Bolt
+
+Purpose:
+Build the first working frontend prototype for the ViCODATHON Interview Agent challenge using the organizer-provided candidate and curriculum data.
+
+Historical status:
+Reconstructed from the early build and Git history. The exact original Bolt wording was not preserved.
+
+Full prompt reconstruction:
+
+Build a clean, professional web application for the ViCODATHON "Interview Agent" challenge.
+
+The product should conduct personalized technical interviews based on a candidate's 31-day AI engineering learning journey.
+
+For this first version, focus on the frontend experience only.
+
+Use the supplied:
+- candidates JSON
+- curriculum JSON
+
+Do not modify the organizer data.
+
+Create the project using React, TypeScript and Vite.
+
+The interface should be clean, minimal and professional rather than looking like a generic chatbot.
+
+The initial flow should be:
+
+Candidate Selection
+→ Candidate Learning Profile
+→ Technical Interview
+→ Interview Feedback
+
+CANDIDATE SELECTION
+
+Display all candidates from the supplied JSON.
+
+Each candidate should show:
+- name
+- current role
+- years of experience
+- education
+- missions completed
+- first-try mission count
+
+Include search by candidate name or role.
+
+Selecting a candidate should open their learning profile.
+
+CANDIDATE PROFILE
+
+Show:
+- candidate identity
+- missions completed
+- active/commit days
+- first-try passes
+- learning journey across the 31-day curriculum
+
+Derive useful interviewer signals from mission history.
+
+Group relevant missions into concepts such as:
+- strong signals
+- areas worth probing
+- explicitly skipped missions
+
+Do not treat curriculum days that are absent from the candidate's mission list as failed.
+
+INTERVIEW SCREEN
+
+Create a technical interview screen with:
+- current curriculum day
+- topic
+- difficulty
+- current question
+- answer textarea
+- submit button
+- interview progress
+- covered curriculum days
+- conversation transcript
+
+For this frontend prototype, use mocked questions.
+
+Use approximately 8 questions spanning multiple curriculum topics so the complete experience can be demonstrated before a real AI backend exists.
+
+FEEDBACK SCREEN
+
+After the mocked interview, display:
+- summary
+- strengths
+- knowledge gaps
+- recommended next steps
+
+This is only placeholder/mock feedback for demonstrating the complete product flow.
+
+Do not add:
+- authentication
+- voice
+- video
+- user accounts
+- complex dashboards
+- unnecessary frameworks
+
+Keep the architecture simple enough to replace the mocked interview with a real backend later.
+
+Implementation summary:
+- Created the React/TypeScript/Vite Interview Agent frontend.
+- Added Candidate Selection, Candidate Brief, Live Interview and Feedback screens.
+- Connected the frontend to the organizer-provided candidate and curriculum JSON.
+- Added candidate search and reusable UI components.
+- Established the state-driven four-screen product flow.
+
+Relevant initial frontend files:
+- src/App.tsx
+- src/components/Selection.tsx
+- src/components/Brief.tsx
+- src/components/Interview.tsx
+- src/components/Feedback.tsx
+- src/components/ui.tsx
+- src/data.ts
+- src/types.ts
+- src/useInterviewFlow.ts
+- src/index.css
+- src/main.tsx
+- package.json
+- vite.config.ts
+- tailwind.config.js
+- tsconfig.json
+- index.html
+
+Historical verification:
+This entry represents the first complete React/Vite Interview Agent frontend visible in the repository history.
+
+==================================================
+4. PROMPT 02
+==================================================
+
+Insert this entry immediately after Prompt 01:
+
+# Prompt 02 — Learning-Aware Mock Interview Experience
+
+Tool: Bolt
+
+Purpose:
+Make the initial Interview Agent prototype demonstrate learning-aware personalization and a complete mock interview journey before integrating a real AI backend.
+
+Historical status:
+Reconstructed from the early frontend state and Git history. The exact original Bolt wording was not preserved.
+
+Full prompt reconstruction:
+
+Improve the initial Interview Agent prototype so the candidate's learning journey visibly influences the interview experience.
+
+Continue using the organizer-provided candidate and curriculum JSON as the source of truth.
+
+Do not add a backend or real LLM yet.
+
+CANDIDATE LEARNING PROFILE
+
+For the selected candidate, derive useful interview signals from their missions.
+
+Show:
+- stronger learning areas
+- areas that required more attempts and should be probed
+- explicitly skipped missions
+- a visual 31-day learning-history representation
+
+The purpose is for the interviewer to appear informed about the candidate before the interview starts.
+
+MOCK INTERVIEW
+
+Create a complete mocked technical interview experience with approximately 8 questions.
+
+Questions should be tied to real curriculum topics.
+
+Each question should carry:
+- curriculum day
+- topic
+- difficulty
+
+Show:
+- progress
+- curriculum days covered
+- conversation transcript
+- answer input
+
+Answers do not need to be intelligently evaluated yet.
+
+Use a small artificial delay after answer submission so the interaction feels like an interview while the real AI backend is still pending.
+
+MOCK FEEDBACK
+
+After the final question, transition to the Feedback screen.
+
+Display the final report structure that the eventual AI backend will populate:
+
+- summary
+- strengths
+- gaps
+- next steps
+
+Keep this implementation replaceable so the mock question array and mock feedback can later be replaced by the required POST /api/interview backend.
+
+Do not over-engineer the architecture.
+
+Implementation summary:
+- Added an approximately 8-question mocked curriculum interview.
+- Added question day/topic/difficulty metadata.
+- Added transcript and covered-day tracking.
+- Added mocked completion and feedback behavior.
+- Created the frontend architecture that could later be replaced by API-driven interview progression.
+
+Relevant implementation:
+- src/useInterviewFlow.ts
+- src/components/Interview.tsx
+- src/components/Feedback.tsx
+- src/components/Brief.tsx
+- src/data.ts
+- src/types.ts
+
+Historical verification:
+The pre-backend repository used a fixed mocked question sequence, local/mock session progression, simulated answer-processing delay, transcript progression and static/mock feedback before Prompt 04 replaced this with the real API.
+
+==================================================
+5. PROMPT 03
+==================================================
+
+Insert this entry immediately after Prompt 02:
+
+# Prompt 03 — Candidate Learning Profile Correctness
+
+Tool: Codex
+
+Purpose:
+Correct candidate-history interpretation and remove unsupported claims from the pre-AI mock interview before building the real backend.
+
+Historical status:
+Reconstructed from the implementation commit and early project discussion. The implementation details are directly supported by Git history.
+
+Full prompt reconstruction:
+
+Before implementing the real backend, audit the existing Interview Agent frontend against the organizer-provided candidate JSON.
+
+There are correctness issues in how candidate mission history is currently being interpreted.
+
+Fix these issues without redesigning the UI or adding the AI backend yet.
+
+1. FIRST-TRY CLASSIFICATION
+
+A mission should only be labeled:
+
+"Passed first try"
+
+when:
+
+passed === true
+AND
+attempts === 1
+
+Do not classify a 2-attempt pass as first-try.
+
+2. HIGH-ATTEMPT / PROBING CLASSIFICATION
+
+A successfully completed mission should be considered an area worth probing when it required 3 or more attempts.
+
+Use:
+
+passed === true
+AND
+attempts >= 3
+
+Failed missions should also remain probing areas.
+
+A 2-attempt successful mission should not falsely appear as a first-try strength.
+
+3. SKIPPED VS UNLISTED
+
+Explicitly skipped missions and curriculum days that are not listed in a candidate's mission history are different states.
+
+Do not combine:
+
+Skipped
+
+with:
+
+Not listed / no recorded mission
+
+Update the candidate-learning-history legend so these states are visibly distinct.
+
+Unlisted curriculum days must not be interpreted as failures.
+
+4. REMOVE UNSUPPORTED QUESTION CLAIMS
+
+The current mock questions contain candidate-specific introductory claims that are not always supported by the selected candidate's actual data.
+
+Examples include statements such as:
+
+"You completed the Embeddings mission on your first try..."
+
+or:
+
+"You needed several attempts..."
+
+when the mock interview is reused for a different candidate.
+
+Remove those unsupported assertions from the fixed mock question text.
+
+Keep the technical question itself.
+
+5. REMOVE HARDCODED CANDIDATE FEEDBACK
+
+The mock feedback currently contains conclusions written for one candidate even when another candidate is selected.
+
+Remove this behavior.
+
+Until the AI backend is implemented:
+
+- use the selected candidate's actual name
+- clearly state that the current frontend mock does not evaluate submitted answers
+- do not invent strengths or weaknesses from candidate responses
+- keep placeholder feedback conservative
+
+6. PRESERVE CURRENT PRODUCT FLOW
+
+Do not add:
+- Gemini
+- Supabase
+- API backend
+- new dependencies
+- unrelated UI redesign
+
+This is a data-integrity and correctness pass only.
+
+Run the project build after making the fixes.
+
+Implementation summary:
+- Corrected first-try classification to require exactly one attempt.
+- Changed high-attempt/probing behavior to use three or more attempts.
+- Separated explicitly skipped curriculum days from unlisted/no-recorded days.
+- Removed unsupported candidate-history claims from fixed mock interview questions.
+- Removed hardcoded candidate-specific final feedback.
+- Made mock feedback candidate-aware while explicitly stating that answers were not yet evaluated.
+
+Files changed:
+- src/data.ts
+- src/components/Brief.tsx
+- src/useInterviewFlow.ts
+
+Historical verification:
+- Commit: 8af0608
+- Commit message: Fix candidate learning profile logic
+
+==================================================
+6. PRESERVE PROMPTS 04–14
+==================================================
+
+This is critical.
+
+Do NOT rewrite, summarize, renumber, reformat or regenerate any existing entry from:
+
+Prompt 04
+through
+Prompt 14
+
+Preserve their existing contents.
+
+The intended top-level sequence after repair must be:
+
+Prompt 01
+Prompt 02
+Prompt 03
+Prompt 04
+Prompt 05
+...
+Prompt 14
+
+Then Prompt 15 will be appended at the end.
+
+Do not delete any existing implementation summaries or test results.
+
+==================================================
+7. APPEND THIS REPAIR AS PROMPT 15
+==================================================
+
+After restoring Prompts 01–03, append this ENTIRE user prompt to the END of PROMPTS.md as:
+
+# Prompt 15 — Restore Missing Early AI Usage Log
+
+Tool: Codex
+
+Purpose:
+Transparently reconstruct missing Prompts 01–03 from repository history while preserving the existing Prompt 04–14 usage log.
+
+Include:
+- this full prompt
+- concise implementation summary
+- Git-history verification performed
+- note that 01–03 are explicitly labeled historical reconstructions
+- files changed
+- validation results
+
+Never include secrets.
+
+==================================================
+8. VALIDATION
+==================================================
+
+After editing, verify:
+
+1. PROMPTS.md contains exactly one top-level entry for each:
+   Prompt 01
+   Prompt 02
+   Prompt 03
+   ...
+   Prompt 15
+
+2. The historical transparency note appears before Prompt 01.
+
+3. Prompts 01–03 explicitly say they are reconstructed.
+
+4. No claim says that the reconstruction is the verbatim original Bolt/Codex transcript.
+
+5. Existing Prompt 04–14 content has not been unintentionally altered.
+
+Use Git diff carefully.
+
+Ideally the diff should consist of:
+
+- insertion of reconstructed Prompts 01–03 + historical note at the beginning
+- insertion of Prompt 15 at the end
+
+Do NOT alter application source.
+
+==================================================
+9. SECRET / SAFETY CHECK
+==================================================
+
+Search the resulting staged changes for anything resembling:
+
+- GEMINI_API_KEY values
+- SUPABASE_SECRET_KEY values
+- sb_secret_
+- API tokens
+- authorization headers
+- passwords
+- .env.local contents
+
+Do not print secret values during the check.
+
+There must be no secret values added to PROMPTS.md.
+
+==================================================
+10. TESTING
+==================================================
+
+Because this is documentation-only, application code should not change.
+
+No functional code changes should be necessary.
+
+Still run:
+
+npm run test:interview
+npm run build
+
+Both must pass before committing.
+
+==================================================
+11. GIT
+==================================================
+
+Before committing:
+
+git status
+
+Confirm the intended tracked change is PROMPTS.md only.
+
+Do not add:
+- .env.local
+- .DS_Store
+- Vercel output
+- build artifacts
+- unrelated files
+
+Commit with:
+
+Restore early AI usage log
+
+Push to origin/main.
+
+==================================================
+FINAL REPORT
+==================================================
+
+Report:
+
+- whether Git history was inspected
+- whether Prompts 01–03 were added
+- whether they are clearly labeled historical reconstructions
+- whether Prompt 04–14 content was preserved
+- whether Prompt 15 was appended
+- files changed
+- secret scan result
+- npm run test:interview result
+- npm run build result
+- commit hash
+- push status
+
+Do not modify application code.
+Do not deploy.
+
+Implementation summary:
+- Added the required historical transparency note at the very top of `PROMPTS.md`.
+- Inserted reconstructed Prompt 01, Prompt 02, and Prompt 03 entries in sequence, retaining their supplied wording and explicitly labeling each as a historical reconstruction rather than a verbatim transcript.
+- Preserved the existing Prompt 04–14 block byte-for-byte and appended this complete repair request as Prompt 15.
+- Changed documentation only; no application, backend, frontend, dependency, configuration, organizer-data, environment, or deployment file was modified.
+
+Git-history verification:
+- Inspected `git log --oneline --reverse`.
+- Verified initial `PROMPTS.md` creation in `0e67353`.
+- Verified organizer candidate and curriculum JSON addition in `1ae37cd`.
+- Verified the first complete React/Vite frontend and mocked interview implementation in `fcb957a`.
+- Inspected the full three-file correctness diff in `8af0608` (`Fix candidate learning profile logic`).
+- Confirmed the Prompt 04–14 block retained its pre-edit SHA-256 fingerprint.
+
+Files changed:
+- PROMPTS.md
+
+Validation:
+- Confirmed the intended historical sequence covers Prompt 01 through Prompt 15.
+- Confirmed the transparency note precedes Prompt 01 and Prompts 01–03 state that they are reconstructed.
+- Confirmed no reconstruction is presented as a verbatim original transcript.
+- `npm run test:interview` — passed.
+- `npm run build` — passed.
+- Secret-shaped-value scan — passed; no credential or environment-variable value was added.
