@@ -2666,3 +2666,281 @@ Tests performed:
 - A sanitized real-fixture smoke test exercised the delayed retry; the provider quota remained exhausted on the bounded retry, so graceful fallback remained active.
 
 No API keys, secret values, prompts, candidate answers, authorization headers, or sensitive environment-variable values were logged or committed.
+
+## Prompt 11 — Gemini Flash-Lite Reliability Fallback
+
+Tool: Codex
+
+Full prompt:
+
+PROMPT 11 — Add Gemini Flash-Lite Reliability Fallback
+
+This is a focused pre-deployment reliability improvement.
+
+Current state:
+- Gemini adaptive interviewing works correctly when the primary model succeeds.
+- Primary model: gemini-3.5-flash
+- 429 RESOURCE_EXHAUSTED has occurred repeatedly during manual testing.
+- Retry-After / Gemini RetryInfo handling is already implemented.
+- Deterministic fallback works, but when Gemini remains unavailable the interview loses adaptivity and observations remain empty.
+
+Goal:
+Add a SECONDARY Gemini model fallback before falling back to deterministic behavior.
+
+Do NOT redesign UI or alter interview intelligence.
+
+==================================================
+1. MODEL FALLBACK CHAIN
+==================================================
+
+Primary model remains:
+
+gemini-3.5-flash
+
+Secondary model:
+
+gemini-3.5-flash-lite
+
+Use the secondary model only when the primary Gemini request remains unavailable after the existing bounded retry behavior for temporary/retriable failures.
+
+Desired chain:
+
+primary Gemini request
+↓
+success => use result
+
+temporary/retriable failure such as 429
+↓
+honor Retry-After / RetryInfo
+↓
+bounded retry primary
+↓
+still unavailable
+↓
+try gemini-3.5-flash-lite
+↓
+success => use result
+
+secondary unavailable/invalid
+↓
+existing deterministic fallback
+
+Do not call both models in parallel.
+
+==================================================
+2. APPLY TO BOTH AI PATHS
+==================================================
+
+Use this reliability chain for:
+
+- answer assessment / next-question generation
+- final feedback generation
+
+Preserve their existing separate timeout behavior.
+
+Normal assessment:
+keep current timeout.
+
+Final feedback:
+keep current larger final-feedback timeout.
+
+==================================================
+3. MODEL CONFIGURATION
+==================================================
+
+Keep:
+
+GEMINI_MODEL
+
+as the primary-model override.
+
+Add an optional environment variable:
+
+GEMINI_FALLBACK_MODEL
+
+Default fallback model:
+
+gemini-3.5-flash-lite
+
+Therefore defaults are conceptually:
+
+primary:
+GEMINI_MODEL || "gemini-3.5-flash"
+
+fallback:
+GEMINI_FALLBACK_MODEL || "gemini-3.5-flash-lite"
+
+Do not expose either to frontend code.
+
+Do not log API keys.
+
+==================================================
+4. RETRY / FAILURE RULES
+==================================================
+
+Do not blindly switch models for every failure.
+
+Use the fallback model for appropriate recoverable/model-availability failures such as:
+- 429 rate/resource exhaustion after bounded retry
+- 503 temporary service unavailable
+- 404/model unavailable where switching models is appropriate
+- timeout after bounded primary attempt where safe
+
+For errors such as malformed application input or clear developer/request bugs, do not hide the issue by endlessly trying models.
+
+Keep all retries bounded.
+
+Avoid long delays that make interview turns unusable.
+
+==================================================
+5. STRUCTURED OUTPUT
+==================================================
+
+gemini-3.5-flash-lite supports structured outputs.
+
+Reuse the same validated response schema and parsing logic.
+
+Do not weaken validation just because the fallback model is used.
+
+Assessment output must still satisfy the existing structured assessment contract.
+
+Final feedback must still satisfy exactly:
+
+{
+  "summary": string,
+  "strengths": string[],
+  "gaps": string[],
+  "next": string[]
+}
+
+==================================================
+6. DEVELOPMENT LOGGING
+==================================================
+
+Extend existing safe development-only logging so we can diagnose model switching.
+
+Safe examples:
+
+[Gemini] primary model rate-limited; retrying after 4s
+[Gemini] primary unavailable; trying fallback model
+[Gemini] fallback model succeeded
+[Gemini] fallback model failed: 429
+
+Never log:
+- API key
+- prompts
+- candidate full answers
+- auth headers
+- Supabase secrets
+- environment values
+
+==================================================
+7. PRESERVE BEHAVIOR
+==================================================
+
+Do NOT change:
+- candidate targeting
+- adaptive decision rules
+- curriculum grounding
+- completion requirements
+- Supabase persistence
+- Evidence & Adaptation layer
+- UI
+- public POST /api/interview contract
+- organizer data
+- feedback evidence weighting
+
+This is reliability only.
+
+==================================================
+8. TESTS
+==================================================
+
+Add focused mocked tests verifying:
+
+1. primary success => fallback model is not called
+2. primary 429 + successful bounded retry => fallback model is not called
+3. primary remains 429 => fallback model is attempted
+4. fallback succeeds => adaptive observation/question is used
+5. primary unavailable + fallback unavailable => deterministic fallback still works
+6. same behavior works for final feedback
+7. fallback-model response still passes structured validation
+8. GEMINI_FALLBACK_MODEL overrides default
+9. default fallback model is gemini-3.5-flash-lite
+10. secrets/prompts are not written to development logs
+11. /api/interview contract remains unchanged
+
+Run:
+
+npm run test:interview
+npm run build
+
+==================================================
+9. PROMPTS.md
+==================================================
+
+Append this entire prompt as:
+
+Prompt 11 — Gemini Flash-Lite Reliability Fallback
+Tool: Codex
+
+Include:
+- implementation summary
+- files changed
+- tests
+- build result
+
+Never overwrite prior entries.
+Never include secrets.
+
+==================================================
+10. GIT
+==================================================
+
+Verify:
+- .env.local ignored
+- no secrets staged
+- organizer data unchanged
+- no unrelated files changed
+
+Commit:
+
+Add Gemini model fallback
+
+Push to origin/main.
+
+==================================================
+FINAL REPORT
+==================================================
+
+Report:
+- files changed
+- fallback chain implemented
+- retriable error behavior
+- model configuration
+- tests
+- build
+- commit hash
+- push status
+
+Do not deploy.
+Do not add other features.
+
+Implementation summary:
+- Added a sequential primary-to-fallback Gemini chain for both adaptive answer assessment and final feedback.
+- The primary model retains two bounded attempts and existing retry-delay handling. Flash-Lite receives one attempt only after eligible availability failures such as repeated 429/408/5xx, 404 model unavailability, timeout, or transport failure.
+- Invalid JSON, schema-validation failures, and non-retriable request errors do not trigger model switching, and both models reuse the same schemas, parsers, and assessment/final-feedback timeouts.
+- Added safe development-only logs for primary retries, fallback switching, fallback success, and terminal failure without model names, prompts, answers, headers, keys, or environment values.
+- Added `GEMINI_FALLBACK_MODEL` with default `gemini-3.5-flash-lite`; `GEMINI_MODEL` remains the primary override.
+
+Files changed:
+- server/gemini.ts
+- scripts/test-interview.mjs
+- PROMPTS.md
+
+Tests performed:
+- `npm run test:interview` — passed primary-only success, primary retry recovery, Flash-Lite adaptive and feedback recovery, invalid fallback rejection, both-model fallback, environment override, safe logging, API contract, and existing interview/storage coverage.
+- `npm run build` — passed TypeScript and Vite production build.
+- A sanitized real-session smoke test returned validated feedback through the completed fallback chain in approximately 13 seconds.
+
+No API keys, secret values, prompts, candidate answers, authorization headers, or environment-variable values were logged or committed.

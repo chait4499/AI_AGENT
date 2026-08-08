@@ -32,6 +32,7 @@ const {
 } = await import(pathToFileURL(bundledEngine).href);
 const {
   DEFAULT_GEMINI_MODEL,
+  DEFAULT_GEMINI_FALLBACK_MODEL,
   GEMINI_ASSESSMENT_TIMEOUT_MS,
   GEMINI_FEEDBACK_TIMEOUT_MS,
   getGeminiClient,
@@ -145,6 +146,7 @@ const originalEnvironment = {
   legacySupabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
   geminiApiKey: process.env.GEMINI_API_KEY,
   geminiModel: process.env.GEMINI_MODEL,
+  geminiFallbackModel: process.env.GEMINI_FALLBACK_MODEL,
 };
 const originalFetch = globalThis.fetch;
 
@@ -153,6 +155,7 @@ delete process.env.SUPABASE_SECRET_KEY;
 delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 delete process.env.GEMINI_API_KEY;
 delete process.env.GEMINI_MODEL;
+delete process.env.GEMINI_FALLBACK_MODEL;
 process.env.NODE_ENV = 'development';
 delete process.env.VERCEL_ENV;
 
@@ -485,10 +488,36 @@ try {
 
   // The default model and feedback prompt preserve overrides while weighting current evidence first.
   assert.equal(DEFAULT_GEMINI_MODEL, 'gemini-3.5-flash');
+  assert.equal(DEFAULT_GEMINI_FALLBACK_MODEL, 'gemini-3.5-flash-lite');
   assert.equal(GEMINI_ASSESSMENT_TIMEOUT_MS, 12_000);
   assert.equal(GEMINI_FEEDBACK_TIMEOUT_MS, 30_000);
   assert.ok(GEMINI_FEEDBACK_TIMEOUT_MS > GEMINI_ASSESSMENT_TIMEOUT_MS);
   delete process.env.GEMINI_MODEL;
+  delete process.env.GEMINI_FALLBACK_MODEL;
+
+  // Repeated primary availability failures switch sequentially to Flash-Lite for adaptive turns.
+  const fallbackAdaptiveSession = `gemini-fallback-adaptive-${Date.now()}`;
+  await request({ sessionId: fallbackAdaptiveSession, candidate });
+  const adaptiveFallbackRequests = [];
+  globalThis.fetch = async (url) => {
+    adaptiveFallbackRequests.push(url);
+    if (url.includes('/gemini-3.5-flash:generateContent')) {
+      return new Response(JSON.stringify({
+        error: {
+          status: 'RESOURCE_EXHAUSTED',
+          details: [{ '@type': 'type.googleapis.com/google.rpc.RetryInfo', retryDelay: '0s' }],
+        },
+      }), { status: 429, headers: { 'Content-Type': 'application/json' } });
+    }
+    return geminiResponse(validGeminiTurn);
+  };
+  const adaptiveFallbackResponse = await request({ sessionId: fallbackAdaptiveSession, message: 'A current answer.' });
+  assertQuestion(adaptiveFallbackResponse);
+  assert.equal(adaptiveFallbackResponse.body.reply, validGeminiTurn.reply);
+  assert.equal(adaptiveFallbackResponse.body.observation.quality, validGeminiTurn.assessment.quality);
+  assert.equal(adaptiveFallbackRequests.length, 3);
+  assert.ok(adaptiveFallbackRequests.slice(0, 2).every((url) => url.includes('/gemini-3.5-flash:generateContent')));
+  assert.ok(adaptiveFallbackRequests[2].includes('/gemini-3.5-flash-lite:generateContent'));
   const feedbackState = {
     ...historicalDifficultyState,
     observations: [
@@ -539,10 +568,10 @@ try {
   assertFeedbackShape(parsedFencedFeedback);
 
   // A rate-limit retry honors Gemini retry metadata and can recover on the bounded second attempt.
-  let rateLimitedCalls = 0;
-  globalThis.fetch = async () => {
-    rateLimitedCalls += 1;
-    if (rateLimitedCalls === 1) {
+  const rateLimitedRequests = [];
+  globalThis.fetch = async (url) => {
+    rateLimitedRequests.push(url);
+    if (rateLimitedRequests.length === 1) {
       return new Response(JSON.stringify({
         error: {
           status: 'RESOURCE_EXHAUSTED',
@@ -553,7 +582,54 @@ try {
     return geminiResponse(evidenceFeedback);
   };
   assert.deepEqual(await geminiClient.feedback(feedbackState), evidenceFeedback);
-  assert.equal(rateLimitedCalls, 2);
+  assert.equal(rateLimitedRequests.length, 2);
+  assert.ok(rateLimitedRequests.every((url) => url.includes('/gemini-3.5-flash:generateContent')));
+
+  // Final feedback falls back to Flash-Lite only after both bounded primary attempts remain unavailable.
+  const fallbackFeedbackRequests = [];
+  globalThis.fetch = async (url) => {
+    fallbackFeedbackRequests.push(url);
+    if (url.includes('/gemini-3.5-flash:generateContent')) {
+      return new Response(JSON.stringify({
+        error: {
+          status: 'RESOURCE_EXHAUSTED',
+          details: [{ '@type': 'type.googleapis.com/google.rpc.RetryInfo', retryDelay: '0s' }],
+        },
+      }), { status: 429, headers: { 'Content-Type': 'application/json' } });
+    }
+    return geminiResponse(evidenceFeedback);
+  };
+  assert.deepEqual(await geminiClient.feedback(feedbackState), evidenceFeedback);
+  assert.equal(fallbackFeedbackRequests.length, 3);
+  assert.ok(fallbackFeedbackRequests[2].includes('/gemini-3.5-flash-lite:generateContent'));
+
+  // Switching models never weakens structured validation.
+  const invalidFallbackRequests = [];
+  globalThis.fetch = async (url) => {
+    invalidFallbackRequests.push(url);
+    if (url.includes('/gemini-3.5-flash:generateContent')) {
+      return new Response('{}', { status: 404, headers: { 'Content-Type': 'application/json' } });
+    }
+    return geminiResponse({ summary: 'Incomplete shape', strengths: 'not-an-array', gaps: [], next: [] });
+  };
+  assert.equal(await geminiClient.feedback(feedbackState), null);
+  assert.equal(invalidFallbackRequests.length, 2);
+
+  // The fallback-model environment override is honored without changing the primary override behavior.
+  process.env.GEMINI_FALLBACK_MODEL = 'gemini-lite-test-override';
+  const overrideClient = getGeminiClient();
+  const overrideRequests = [];
+  globalThis.fetch = async (url) => {
+    overrideRequests.push(url);
+    if (url.includes('/gemini-3.5-flash:generateContent')) {
+      return new Response('{}', { status: 404, headers: { 'Content-Type': 'application/json' } });
+    }
+    return geminiResponse(evidenceFeedback);
+  };
+  assert.deepEqual(await overrideClient.feedback(feedbackState), evidenceFeedback);
+  assert.equal(overrideRequests.length, 2);
+  assert.ok(overrideRequests[1].includes('/gemini-lite-test-override:generateContent'));
+  delete process.env.GEMINI_FALLBACK_MODEL;
 
   // Successfully generated final feedback is returned and retained in session state.
   globalThis.fetch = async () => geminiResponse(evidenceFeedback);
@@ -586,6 +662,35 @@ try {
   assert.match(diagnosticLogs[0], /\[Gemini\] final feedback failed: invalid JSON/);
   assert.doesNotMatch(diagnosticLogs.join(' '), new RegExp(fakeGeminiSecret));
   assert.doesNotMatch(diagnosticLogs.join(' '), /Private candidate answer/);
+
+  // If both models are unavailable, final feedback remains deterministic and switch logs stay secret-free.
+  const switchLogs = [];
+  const switchOriginalWarn = console.warn;
+  const switchOriginalInfo = console.info;
+  console.warn = (...values) => switchLogs.push(values.join(' '));
+  console.info = (...values) => switchLogs.push(values.join(' '));
+  let unavailableModelCalls = 0;
+  globalThis.fetch = async (url) => {
+    unavailableModelCalls += 1;
+    return new Response('{}', {
+      status: url.includes('/gemini-3.5-flash:generateContent') ? 404 : 503,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  };
+  const unavailableFeedbackClient = getGeminiClient();
+  const unavailableFinishState = eligibleForFinish(initializeSession('gemini-models-unavailable', candidate).state);
+  const unavailableFinal = await continueSession(unavailableFinishState, 'Another private answer that must remain out of logs.', {
+    assess: async () => adaptiveTurn({ action: 'finish', day: unavailableFinishState.currentDay, reply: '' }),
+    feedback: (state) => unavailableFeedbackClient.feedback(state),
+  });
+  console.warn = switchOriginalWarn;
+  console.info = switchOriginalInfo;
+  assert.equal(unavailableModelCalls, 2);
+  assert.match(unavailableFinal.response.feedback.summary, /fallback prioritizes available interview observations/);
+  assert.match(switchLogs.join(' '), /primary unavailable; trying fallback model/);
+  assert.match(switchLogs.join(' '), /fallback model failed: HTTP 503/);
+  assert.doesNotMatch(switchLogs.join(' '), new RegExp(fakeGeminiSecret));
+  assert.doesNotMatch(switchLogs.join(' '), /Another private answer/);
 
   // A later strong observation resolves an earlier same-day gap in fallback feedback.
   const ethan = candidatesData.candidates.find((entry) => entry.member.name === 'Ethan Brooks');
@@ -630,7 +735,7 @@ try {
   assertQuestion(malformedFallback, true);
   assert.equal(malformedCalls, 2);
 
-  // Network failure retries once and uses the same deterministic fallback path.
+  // Primary and fallback network failure still use the same deterministic fallback path.
   const networkSession = `gemini-network-${Date.now()}`;
   globalThis.fetch = originalFetch;
   delete process.env.GEMINI_API_KEY;
@@ -643,7 +748,7 @@ try {
   };
   const networkFallback = await request({ sessionId: networkSession, message: 'Answer' });
   assertQuestion(networkFallback, true);
-  assert.equal(networkCalls, 2);
+  assert.equal(networkCalls, 3);
 
   // Supabase still receives only its server-side secret through apikey.
   globalThis.fetch = originalFetch;
@@ -682,6 +787,7 @@ try {
     SUPABASE_SERVICE_ROLE_KEY: originalEnvironment.legacySupabaseKey,
     GEMINI_API_KEY: originalEnvironment.geminiApiKey,
     GEMINI_MODEL: originalEnvironment.geminiModel,
+    GEMINI_FALLBACK_MODEL: originalEnvironment.geminiFallbackModel,
   })) {
     if (value === undefined) delete process.env[name];
     else process.env[name] = value;

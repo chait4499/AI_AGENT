@@ -5,6 +5,7 @@ import type { AdaptiveInterviewAI, AdaptiveTurn, SessionState } from './intervie
 declare const process: { env: Record<string, string | undefined> };
 
 export const DEFAULT_GEMINI_MODEL = 'gemini-3.5-flash';
+export const DEFAULT_GEMINI_FALLBACK_MODEL = 'gemini-3.5-flash-lite';
 export const GEMINI_ASSESSMENT_TIMEOUT_MS = 12_000;
 export const GEMINI_FEEDBACK_TIMEOUT_MS = 30_000;
 const MAX_RETRY_DELAY_MS = 10_000;
@@ -61,6 +62,12 @@ interface GeminiErrorResponse {
     status?: string;
     details?: Array<{ '@type'?: string; retryDelay?: string }>;
   };
+}
+
+interface StructuredRequestOutcome<T> {
+  value: T | null;
+  fallbackEligible: boolean;
+  reason: string;
 }
 
 const qualities = new Set(['weak', 'partial', 'good', 'strong']);
@@ -165,6 +172,11 @@ function wait(milliseconds: number): Promise<void> {
 function developmentLog(operation: string, reason: string) {
   if (process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production') return;
   console.warn(`[Gemini] ${operation} failed: ${reason}`);
+}
+
+function developmentInfo(message: string) {
+  if (process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production') return;
+  console.info(`[Gemini] ${message}`);
 }
 
 function profileContext(state: SessionState) {
@@ -275,10 +287,14 @@ ${JSON.stringify({
 }
 
 class GeminiInterviewClient implements AdaptiveInterviewAI {
-  constructor(private readonly apiKey: string, private readonly model: string) {}
+  constructor(
+    private readonly apiKey: string,
+    private readonly primaryModel: string,
+    private readonly fallbackModel: string,
+  ) {}
 
   async assess(state: SessionState, latestAnswer: string): Promise<AdaptiveTurn | null> {
-    return this.requestStructured(
+    return this.requestWithFallback(
       assessmentPrompt(state, latestAnswer),
       turnSchema,
       validateTurn,
@@ -287,7 +303,7 @@ class GeminiInterviewClient implements AdaptiveInterviewAI {
   }
 
   async feedback(state: SessionState): Promise<Feedback | null> {
-    return this.requestStructured(
+    return this.requestWithFallback(
       feedbackPrompt(state),
       feedbackSchema,
       validateFeedback,
@@ -295,16 +311,62 @@ class GeminiInterviewClient implements AdaptiveInterviewAI {
     );
   }
 
-  private async requestStructured<T>(
+  private async requestWithFallback<T>(
     prompt: string,
     schema: Record<string, unknown>,
     validate: (value: unknown) => T | null,
     options: { operation: string; timeoutMs: number },
   ): Promise<T | null> {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(this.model)}:generateContent`;
-    let failureReason = 'unknown error';
+    const primary = await this.requestStructured(
+      this.primaryModel,
+      prompt,
+      schema,
+      validate,
+      options,
+      2,
+      'primary',
+    );
+    if (primary.value) return primary.value;
 
-    for (let attempt = 0; attempt < 2; attempt += 1) {
+    if (!primary.fallbackEligible || this.fallbackModel === this.primaryModel) {
+      developmentLog(options.operation, primary.reason);
+      return null;
+    }
+
+    developmentInfo('primary unavailable; trying fallback model');
+    const fallback = await this.requestStructured(
+      this.fallbackModel,
+      prompt,
+      schema,
+      validate,
+      options,
+      1,
+      'fallback',
+    );
+    if (fallback.value) {
+      developmentInfo('fallback model succeeded');
+      return fallback.value;
+    }
+
+    developmentInfo(`fallback model failed: ${fallback.reason}`);
+    developmentLog(options.operation, fallback.reason);
+    return null;
+  }
+
+  private async requestStructured<T>(
+    model: string,
+    prompt: string,
+    schema: Record<string, unknown>,
+    validate: (value: unknown) => T | null,
+    options: { operation: string; timeoutMs: number },
+    maxAttempts: number,
+    modelRole: 'primary' | 'fallback',
+  ): Promise<StructuredRequestOutcome<T>> {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+    let failureReason = 'unknown error';
+    let fallbackEligible = false;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), options.timeoutMs);
       try {
@@ -330,9 +392,14 @@ class GeminiInterviewClient implements AdaptiveInterviewAI {
 
         if (!response.ok) {
           const retryable = response.status === 408 || response.status === 429 || response.status >= 500;
+          fallbackEligible = retryable || response.status === 404;
           failureReason = response.status === 429 ? 'rate limited (HTTP 429)' : `HTTP ${response.status}`;
-          if (attempt === 0 && retryable) {
-            await wait(await retryDelayMs(response));
+          if (attempt < maxAttempts - 1 && retryable) {
+            const delay = await retryDelayMs(response);
+            if (modelRole === 'primary' && response.status === 429) {
+              developmentInfo(`primary model rate-limited; retrying after ${Math.round(delay / 1_000)}s`);
+            }
+            await wait(delay);
             continue;
           }
           break;
@@ -354,25 +421,27 @@ class GeminiInterviewClient implements AdaptiveInterviewAI {
           break;
         }
         const validated = validate(parsed);
-        if (validated) return validated;
+        if (validated) return { value: validated, fallbackEligible: false, reason: '' };
         failureReason = 'validation failed';
-        if (attempt > 0) break;
+        fallbackEligible = false;
+        if (attempt >= maxAttempts - 1) break;
       } catch (caught) {
         failureReason = caught instanceof Error && caught.name === 'AbortError' ? 'timeout' : 'request error';
-        if (attempt > 0) break;
+        fallbackEligible = true;
+        if (attempt >= maxAttempts - 1) break;
       } finally {
         clearTimeout(timeout);
       }
     }
 
-    developmentLog(options.operation, failureReason);
-    return null;
+    return { value: null, fallbackEligible, reason: failureReason };
   }
 }
 
 export function getGeminiClient(): AdaptiveInterviewAI | null {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return null;
-  const model = process.env.GEMINI_MODEL?.trim() || DEFAULT_GEMINI_MODEL;
-  return new GeminiInterviewClient(apiKey, model);
+  const primaryModel = process.env.GEMINI_MODEL?.trim() || DEFAULT_GEMINI_MODEL;
+  const fallbackModel = process.env.GEMINI_FALLBACK_MODEL?.trim() || DEFAULT_GEMINI_FALLBACK_MODEL;
+  return new GeminiInterviewClient(apiKey, primaryModel, fallbackModel);
 }
