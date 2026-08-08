@@ -40,13 +40,14 @@ export function deriveProfile(candidate: Candidate): CandidateProfile {
     if (m.skipped) {
       skipped.push({ day: m.day, title: m.title, reason: 'Skipped' });
     } else if (m.passed === false) {
-      probing.push({ day: m.day, title: m.title, reason: `Failed after ${attempts} attempt${attempts !== 1 ? 's' : ''}` });
-    } else if (m.passed === true) {
-      if (attempts <= 2) {
-        strong.push({ day: m.day, title: m.title, reason: `Passed first try` });
-      } else {
-        probing.push({ day: m.day, title: m.title, reason: `Passed after ${attempts} attempts` });
-      }
+      const reason = m.attempts === undefined
+        ? 'Knowledge gap'
+        : `Knowledge gap after ${attempts} attempt${attempts !== 1 ? 's' : ''}`;
+      probing.push({ day: m.day, title: m.title, reason });
+    } else if (m.passed === true && attempts === 1) {
+      strong.push({ day: m.day, title: m.title, reason: 'Passed first try' });
+    } else if (m.passed === true && attempts >= 3) {
+      probing.push({ day: m.day, title: m.title, reason: `Passed after ${attempts} attempts` });
     }
   }
 
@@ -60,7 +61,7 @@ export function getDayStatus(candidate: Candidate, day: number): 'passed' | 'war
   if (mission.passed === false) return 'failed';
   if (mission.passed === true) {
     const attempts = mission.attempts ?? 1;
-    return attempts > 3 ? 'warning' : 'passed';
+    return attempts >= 3 ? 'warning' : 'passed';
   }
   return 'none';
 }

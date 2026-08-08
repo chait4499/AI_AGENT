@@ -53,7 +53,8 @@ export function Brief({
             <LegendDot color="bg-emerald-400" label="Passed" />
             <LegendDot color="bg-amber-400" label="High attempts" />
             <LegendDot color="bg-red-400" label="Failed" />
-            <LegendDot color="bg-ink-200" label="Skipped / not listed" />
+            <LegendDot color="bg-ink-200" label="Skipped" />
+            <LegendDot color="bg-ink-100" label="Not listed" />
           </div>
         </Card>
 

@@ -6,19 +6,19 @@ const MOCK_QUESTIONS: { day: number; topic: string; question: string; difficulty
   {
     day: 7,
     topic: 'Embeddings Explained',
-    question: 'You completed the Embeddings mission on your first try. Can you explain how text is converted into vector embeddings and why similar concepts cluster together in vector space?',
+    question: 'Can you explain how text is converted into vector embeddings and why similar concepts cluster together in vector space?',
     difficulty: 'Standard',
   },
   {
     day: 10,
     topic: 'Retrieval & Matching Engine',
-    question: 'Your retrieval engine mission was solid. Walk me through how you would design a query router that decides between SQL lookup, vector search, and hybrid retrieval. What signals would drive that decision?',
+    question: 'Walk me through how you would design a query router that decides between SQL lookup, vector search, and hybrid retrieval. What signals would drive that decision?',
     difficulty: 'Advanced',
   },
   {
     day: 12,
     topic: 'Prompt Engineering Fundamentals',
-    question: 'You needed several attempts on Prompt Engineering Fundamentals. Compare zero-shot, few-shot, and chain-of-thought prompting — when would you reach for each, and what are the tradeoffs in accuracy versus token cost?',
+    question: 'Compare zero-shot, few-shot, and chain-of-thought prompting — when would you reach for each, and what are the tradeoffs in accuracy versus token cost?',
     difficulty: 'Standard',
   },
   {
@@ -30,7 +30,7 @@ const MOCK_QUESTIONS: { day: number; topic: string; question: string; difficulty
   {
     day: 22,
     topic: 'Multi-Agent Orchestration',
-    question: 'You worked on multi-agent orchestration with CrewAI. In what scenarios does a multi-agent architecture outperform a single agent? Can you give a concrete healthcare example where delegation to a specialist agent is worth the overhead?',
+    question: 'In what scenarios does a multi-agent architecture outperform a single agent? Can you give a concrete healthcare example where delegation to a specialist agent is worth the overhead?',
     difficulty: 'Deep',
   },
   {
@@ -42,38 +42,27 @@ const MOCK_QUESTIONS: { day: number; topic: string; question: string; difficulty
   {
     day: 28,
     topic: 'Docker & Kubernetes Deployment',
-    question: 'You deployed the chatbot to Kubernetes. Walk me through how you would configure health checks, environment variables, and rolling updates for the FastAPI backend. What would your deployment strategy look like?',
+    question: 'Walk me through how you would configure health checks, environment variables, and rolling updates for a FastAPI backend deployed to Kubernetes. What would your deployment strategy look like?',
     difficulty: 'Deep',
   },
   {
     day: 31,
     topic: 'Capstone Project & Final Demo',
-    question: 'For your capstone, you demonstrated a full enterprise healthcare chatbot. If you had to add a new feature — say, a multilingual interface — how would you integrate it end-to-end across retrieval, the LLM layer, and the frontend without breaking existing functionality?',
+    question: 'If you had to add a multilingual interface to an enterprise healthcare chatbot, how would you integrate it end-to-end across retrieval, the LLM layer, and the frontend without breaking existing functionality?',
     difficulty: 'Deep',
   },
 ];
 
-const MOCK_FEEDBACK: Feedback = {
-  summary:
-    'Sarah demonstrated strong foundational understanding of embeddings and retrieval, and a solid grasp of multi-agent orchestration. She struggled initially with prompt engineering concepts but showed improvement. Her deployment and capstone work indicate production-readiness, though deeper exploration of fine-tuning tradeoffs would round out her skill set.',
-  strengths: [
-    'Strong first-principles understanding of embeddings and vector search',
-    'Practical experience with multi-agent orchestration and MCP',
-    'Production deployment experience with Docker and Kubernetes',
-    'Clear communication when explaining architecture tradeoffs',
-  ],
-  gaps: [
-    'Prompt engineering fundamentals required multiple attempts — revisit few-shot and chain-of-thought patterns',
-    'Limited exposure to fine-tuning concepts (LoRA/QLoRA) — skipped those modules',
-    'Could deepen knowledge of evaluation metrics for RAG pipelines',
-  ],
-  next: [
-    'Build a side project that compares few-shot vs chain-of-thought prompting on a fixed dataset',
-    'Take an online course on parameter-efficient fine-tuning (LoRA, QLoRA)',
-    'Implement an automated evaluation pipeline for your existing RAG chatbot',
-    'Contribute to an open-source agent framework to deepen orchestration skills',
-  ],
-};
+function buildMockFeedback(candidate: Candidate): Feedback {
+  return {
+    summary: `${candidate.member.name} completed the mocked interview. This placeholder feedback does not evaluate the submitted answers; answer evaluation will be provided by the future AI backend.`,
+    strengths: ['Answer-based strengths are not evaluated in this frontend mock.'],
+    gaps: ['Answer-based knowledge gaps are not evaluated in this frontend mock.'],
+    next: [
+      'Review the interview transcript once answer evaluation is connected.',
+    ],
+  };
+}
 
 function buildMockTurns(): Turn[] {
   return MOCK_QUESTIONS.map((q) => ({
@@ -134,7 +123,7 @@ export function useInterviewFlow() {
               ...prev,
               turns: newTurns,
               done: true,
-              feedback: MOCK_FEEDBACK,
+              feedback: buildMockFeedback(prev.candidate),
             };
           }
 
