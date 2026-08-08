@@ -45,6 +45,7 @@ export interface SessionState {
   askedQuestions: string[];
   targetDays: number[];
   observations: AssessmentObservation[];
+  feedback?: Feedback;
   done: boolean;
 }
 
@@ -317,12 +318,14 @@ async function finishSession(
       feedback = null;
     }
   }
+  const finalFeedback = feedback ?? buildFallbackFeedback(state);
+  state.feedback = finalFeedback;
   return {
     state,
     response: {
       reply: 'Interview completed.',
       done: true,
-      feedback: feedback ?? buildFallbackFeedback(state),
+      feedback: finalFeedback,
       ...(observation ? { observation: publicObservation(observation) } : {}),
     },
   };

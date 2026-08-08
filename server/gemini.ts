@@ -5,7 +5,9 @@ import type { AdaptiveInterviewAI, AdaptiveTurn, SessionState } from './intervie
 declare const process: { env: Record<string, string | undefined> };
 
 export const DEFAULT_GEMINI_MODEL = 'gemini-3.5-flash';
-const GEMINI_TIMEOUT_MS = 12_000;
+export const GEMINI_ASSESSMENT_TIMEOUT_MS = 12_000;
+export const GEMINI_FEEDBACK_TIMEOUT_MS = 30_000;
+const MAX_RETRY_DELAY_MS = 10_000;
 const curriculum = curriculumData as Curriculum;
 
 const turnSchema = {
@@ -43,15 +45,22 @@ const feedbackSchema = {
   additionalProperties: false,
   properties: {
     summary: { type: 'string' },
-    strengths: { type: 'array', items: { type: 'string' }, minItems: 2, maxItems: 5 },
-    gaps: { type: 'array', items: { type: 'string' }, minItems: 2, maxItems: 5 },
-    next: { type: 'array', items: { type: 'string' }, minItems: 2, maxItems: 5 },
+    strengths: { type: 'array', items: { type: 'string' }, minItems: 1, maxItems: 5 },
+    gaps: { type: 'array', items: { type: 'string' }, maxItems: 5 },
+    next: { type: 'array', items: { type: 'string' }, minItems: 1, maxItems: 5 },
   },
   required: ['summary', 'strengths', 'gaps', 'next'],
 };
 
 interface GeminiResponse {
-  candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+  candidates?: Array<{ content?: { parts?: Array<{ text?: string }> }; finishReason?: string }>;
+}
+
+interface GeminiErrorResponse {
+  error?: {
+    status?: string;
+    details?: Array<{ '@type'?: string; retryDelay?: string }>;
+  };
 }
 
 const qualities = new Set(['weak', 'partial', 'good', 'strong']);
@@ -105,8 +114,57 @@ function validateFeedback(value: unknown): Feedback | null {
   const next = stringArray(feedback.next, 5);
 
   if (!summary || summary.length > 1_200 || !strengths || !gaps || !next) return null;
-  if (strengths.length < 2 || gaps.length < 2 || next.length < 2) return null;
+  if (strengths.length < 1 || next.length < 1) return null;
   return { summary, strengths, gaps, next };
+}
+
+function parseStructuredJson(text: string): unknown {
+  const trimmed = text.trim();
+  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  const candidate = fenced?.[1]?.trim() ?? trimmed;
+  try {
+    return JSON.parse(candidate);
+  } catch {
+    const objectStart = candidate.indexOf('{');
+    const objectEnd = candidate.lastIndexOf('}');
+    if (objectStart < 0 || objectEnd <= objectStart) return null;
+    try {
+      return JSON.parse(candidate.slice(objectStart, objectEnd + 1));
+    } catch {
+      return null;
+    }
+  }
+}
+
+function parseDurationMs(value: string | undefined): number | null {
+  if (!value) return null;
+  const match = value.trim().match(/^(\d+(?:\.\d+)?)(ms|s)?$/i);
+  if (!match) return null;
+  const amount = Number(match[1]);
+  if (!Number.isFinite(amount)) return null;
+  return Math.round(amount * (match[2]?.toLowerCase() === 'ms' ? 1 : 1_000));
+}
+
+async function retryDelayMs(response: Response): Promise<number> {
+  const headerDelay = parseDurationMs(response.headers.get('retry-after') ?? undefined);
+  if (headerDelay !== null) return Math.min(headerDelay, MAX_RETRY_DELAY_MS);
+  if (response.status !== 429) return 0;
+  try {
+    const body = await response.json() as GeminiErrorResponse;
+    const retryInfo = body.error?.details?.find((detail) => detail['@type']?.endsWith('RetryInfo'));
+    return Math.min(parseDurationMs(retryInfo?.retryDelay) ?? 1_000, MAX_RETRY_DELAY_MS);
+  } catch {
+    return 1_000;
+  }
+}
+
+function wait(milliseconds: number): Promise<void> {
+  return milliseconds > 0 ? new Promise((resolve) => setTimeout(resolve, milliseconds)) : Promise.resolve();
+}
+
+function developmentLog(operation: string, reason: string) {
+  if (process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production') return;
+  console.warn(`[Gemini] ${operation} failed: ${reason}`);
 }
 
 function profileContext(state: SessionState) {
@@ -195,9 +253,10 @@ function feedbackPrompt(state: SessionState): string {
 Rules:
 - Evidence priority is: (1) actual interview answers and assessments, (2) current observed strengths/gaps, then (3) historical learning journey as supporting context only.
 - Use only evidence from the transcript, answer assessments, supplied learning history, and covered curriculum.
-- Provide 2–5 specific strengths demonstrated in answers, 2–5 specific gaps, and 2–5 actionable next steps.
+- Provide 1–5 specific strengths demonstrated in answers, 0–5 specific gaps, and 1–5 actionable next steps. Do not invent a gap merely to reach an item count.
 - Historical attempts or failure alone must never create a current gap. A gap normally requires weak/partial current assessment, missing concepts, an unresolved misconception, or inability to answer a follow-up.
 - If a historically difficult topic has good/strong current evidence, treat it as progress or a demonstrated strength, not as a gap.
+- For repeated assessments on the same curriculum day, the latest observation represents current understanding. If a later answer demonstrates concepts that were previously missing, treat the earlier gap as resolved rather than current.
 - Strengths must state what the candidate demonstrated. Gaps must state what was missing or incomplete. Next steps should follow directly from observed gaps when possible.
 - Prefer precise evidence over adjectives. Avoid inflated labels such as “exceptional,” “outstanding,” “excellent,” or “highly capable.”
 - Connect recommendations to real curriculum days/topics when supported.
@@ -219,23 +278,35 @@ class GeminiInterviewClient implements AdaptiveInterviewAI {
   constructor(private readonly apiKey: string, private readonly model: string) {}
 
   async assess(state: SessionState, latestAnswer: string): Promise<AdaptiveTurn | null> {
-    return this.requestStructured(assessmentPrompt(state, latestAnswer), turnSchema, validateTurn);
+    return this.requestStructured(
+      assessmentPrompt(state, latestAnswer),
+      turnSchema,
+      validateTurn,
+      { operation: 'answer assessment', timeoutMs: GEMINI_ASSESSMENT_TIMEOUT_MS },
+    );
   }
 
   async feedback(state: SessionState): Promise<Feedback | null> {
-    return this.requestStructured(feedbackPrompt(state), feedbackSchema, validateFeedback);
+    return this.requestStructured(
+      feedbackPrompt(state),
+      feedbackSchema,
+      validateFeedback,
+      { operation: 'final feedback', timeoutMs: GEMINI_FEEDBACK_TIMEOUT_MS },
+    );
   }
 
   private async requestStructured<T>(
     prompt: string,
     schema: Record<string, unknown>,
     validate: (value: unknown) => T | null,
+    options: { operation: string; timeoutMs: number },
   ): Promise<T | null> {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(this.model)}:generateContent`;
+    let failureReason = 'unknown error';
 
     for (let attempt = 0; attempt < 2; attempt += 1) {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS);
+      const timeout = setTimeout(() => controller.abort(), options.timeoutMs);
       try {
         const response = await fetch(url, {
           method: 'POST',
@@ -259,34 +330,42 @@ class GeminiInterviewClient implements AdaptiveInterviewAI {
 
         if (!response.ok) {
           const retryable = response.status === 408 || response.status === 429 || response.status >= 500;
-          if (attempt === 0 && retryable) continue;
-          return null;
+          failureReason = response.status === 429 ? 'rate limited (HTTP 429)' : `HTTP ${response.status}`;
+          if (attempt === 0 && retryable) {
+            await wait(await retryDelayMs(response));
+            continue;
+          }
+          break;
         }
 
         const body = await response.json() as GeminiResponse;
-        const text = body.candidates?.[0]?.content?.parts?.map((part) => part.text ?? '').join('').trim();
+        const candidate = body.candidates?.[0];
+        const text = candidate?.content?.parts?.map((part) => part.text ?? '').join('').trim();
         if (!text) {
+          failureReason = candidate?.finishReason ? `empty content (${candidate.finishReason})` : 'empty content';
           if (attempt === 0) continue;
-          return null;
+          break;
         }
 
-        let parsed: unknown;
-        try {
-          parsed = JSON.parse(text);
-        } catch {
+        const parsed = parseStructuredJson(text);
+        if (parsed === null) {
+          failureReason = 'invalid JSON';
           if (attempt === 0) continue;
-          return null;
+          break;
         }
         const validated = validate(parsed);
         if (validated) return validated;
-        if (attempt > 0) return null;
-      } catch {
-        if (attempt > 0) return null;
+        failureReason = 'validation failed';
+        if (attempt > 0) break;
+      } catch (caught) {
+        failureReason = caught instanceof Error && caught.name === 'AbortError' ? 'timeout' : 'request error';
+        if (attempt > 0) break;
       } finally {
         clearTimeout(timeout);
       }
     }
 
+    developmentLog(options.operation, failureReason);
     return null;
   }
 }

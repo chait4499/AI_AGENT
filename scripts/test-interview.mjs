@@ -30,7 +30,12 @@ const {
   continueSession,
   initializeSession,
 } = await import(pathToFileURL(bundledEngine).href);
-const { DEFAULT_GEMINI_MODEL, getGeminiClient } = await import(pathToFileURL(bundledGemini).href);
+const {
+  DEFAULT_GEMINI_MODEL,
+  GEMINI_ASSESSMENT_TIMEOUT_MS,
+  GEMINI_FEEDBACK_TIMEOUT_MS,
+  getGeminiClient,
+} = await import(pathToFileURL(bundledGemini).href);
 const {
   buildInterviewPath,
   buildSignalValidations,
@@ -108,6 +113,20 @@ function geminiResponse(value) {
   return new Response(JSON.stringify({
     candidates: [{ content: { parts: [{ text: JSON.stringify(value) }] } }],
   }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+}
+
+function geminiTextResponse(value) {
+  return new Response(JSON.stringify({
+    candidates: [{ content: { parts: [{ text: value }] }, finishReason: 'STOP' }],
+  }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+}
+
+function assertFeedbackShape(feedback) {
+  assert.deepEqual(Object.keys(feedback).sort(), ['gaps', 'next', 'strengths', 'summary']);
+  assert.equal(typeof feedback.summary, 'string');
+  assert.ok(Array.isArray(feedback.strengths));
+  assert.ok(Array.isArray(feedback.gaps));
+  assert.ok(Array.isArray(feedback.next));
 }
 
 function eligibleForFinish(state) {
@@ -272,6 +291,7 @@ try {
   assert.equal(validFinish.response.done, true);
   assert.deepEqual(Object.keys(validFinish.response.feedback).sort(), ['gaps', 'next', 'strengths', 'summary']);
   assert.deepEqual(validFinish.response.feedback, evidenceFeedback);
+  assert.deepEqual(validFinish.state.feedback, evidenceFeedback);
   assert.ok(validFinish.state.observations.length > 0);
 
   // Current interview evidence outweighs historical attempts in deterministic fallback feedback.
@@ -465,6 +485,9 @@ try {
 
   // The default model and feedback prompt preserve overrides while weighting current evidence first.
   assert.equal(DEFAULT_GEMINI_MODEL, 'gemini-3.5-flash');
+  assert.equal(GEMINI_ASSESSMENT_TIMEOUT_MS, 12_000);
+  assert.equal(GEMINI_FEEDBACK_TIMEOUT_MS, 30_000);
+  assert.ok(GEMINI_FEEDBACK_TIMEOUT_MS > GEMINI_ASSESSMENT_TIMEOUT_MS);
   delete process.env.GEMINI_MODEL;
   const feedbackState = {
     ...historicalDifficultyState,
@@ -501,6 +524,95 @@ try {
   assert.match(feedbackInstructions, /Strengths must state what the candidate demonstrated/);
   assert.match(feedbackInstructions, /progress_demonstrated/);
   assert.match(feedbackInstructions, /current_gap_evidence/);
+  assert.match(feedbackInstructions, /latest observation represents current understanding/);
+
+  // Common fenced JSON is parsed, while the validated public feedback shape remains exact.
+  const fencedFeedback = {
+    summary: 'The candidate demonstrated current understanding across the covered areas.',
+    strengths: ['Explained the retrieval trade-off with current interview evidence.'],
+    gaps: [],
+    next: ['Continue practicing production retrieval evaluation.'],
+  };
+  globalThis.fetch = async () => geminiTextResponse(`\n\`\`\`json\n${JSON.stringify(fencedFeedback)}\n\`\`\`\n`);
+  const parsedFencedFeedback = await geminiClient.feedback(feedbackState);
+  assert.deepEqual(parsedFencedFeedback, fencedFeedback);
+  assertFeedbackShape(parsedFencedFeedback);
+
+  // A rate-limit retry honors Gemini retry metadata and can recover on the bounded second attempt.
+  let rateLimitedCalls = 0;
+  globalThis.fetch = async () => {
+    rateLimitedCalls += 1;
+    if (rateLimitedCalls === 1) {
+      return new Response(JSON.stringify({
+        error: {
+          status: 'RESOURCE_EXHAUSTED',
+          details: [{ '@type': 'type.googleapis.com/google.rpc.RetryInfo', retryDelay: '0s' }],
+        },
+      }), { status: 429, headers: { 'Content-Type': 'application/json' } });
+    }
+    return geminiResponse(evidenceFeedback);
+  };
+  assert.deepEqual(await geminiClient.feedback(feedbackState), evidenceFeedback);
+  assert.equal(rateLimitedCalls, 2);
+
+  // Successfully generated final feedback is returned and retained in session state.
+  globalThis.fetch = async () => geminiResponse(evidenceFeedback);
+  const generatedFinishState = eligibleForFinish(initializeSession('gemini-feedback-success', candidate).state);
+  const generatedFinish = await continueSession(generatedFinishState, 'Final answer with evidence.', {
+    assess: async () => adaptiveTurn({ action: 'finish', day: generatedFinishState.currentDay, reply: '' }),
+    feedback: (state) => geminiClient.feedback(state),
+  });
+  assert.deepEqual(generatedFinish.response.feedback, evidenceFeedback);
+  assert.deepEqual(generatedFinish.state.feedback, evidenceFeedback);
+  assertFeedbackShape(generatedFinish.response.feedback);
+
+  // Malformed final feedback logs only a safe diagnostic and falls back deterministically.
+  const diagnosticLogs = [];
+  const originalWarn = console.warn;
+  console.warn = (...values) => diagnosticLogs.push(values.join(' '));
+  const fakeGeminiSecret = ['sensitive', 'gemini', 'test', 'value'].join('-');
+  process.env.GEMINI_API_KEY = fakeGeminiSecret;
+  globalThis.fetch = async () => geminiTextResponse('not-json');
+  const invalidFeedbackClient = getGeminiClient();
+  const malformedFinishState = eligibleForFinish(initializeSession('gemini-feedback-malformed', candidate).state);
+  const malformedFinal = await continueSession(malformedFinishState, 'Private candidate answer that must not be logged.', {
+    assess: async () => adaptiveTurn({ action: 'finish', day: malformedFinishState.currentDay, reply: '' }),
+    feedback: (state) => invalidFeedbackClient.feedback(state),
+  });
+  console.warn = originalWarn;
+  assert.match(malformedFinal.response.feedback.summary, /fallback prioritizes available interview observations/);
+  assert.deepEqual(malformedFinal.state.feedback, malformedFinal.response.feedback);
+  assert.equal(diagnosticLogs.length, 1);
+  assert.match(diagnosticLogs[0], /\[Gemini\] final feedback failed: invalid JSON/);
+  assert.doesNotMatch(diagnosticLogs.join(' '), new RegExp(fakeGeminiSecret));
+  assert.doesNotMatch(diagnosticLogs.join(' '), /Private candidate answer/);
+
+  // A later strong observation resolves an earlier same-day gap in fallback feedback.
+  const ethan = candidatesData.candidates.find((entry) => entry.member.name === 'Ethan Brooks');
+  assert.ok(ethan);
+  const resolvedState = {
+    ...eligibleForFinish(initializeSession('resolved-gap', ethan).state),
+    currentDay: 3,
+    currentTopic: curriculumDay(3).title,
+    observations: [{
+      day: 3,
+      quality: 'partial',
+      conceptsUnderstood: ['browser-origin policy'],
+      conceptsMissing: ['CORS', 'CORSMiddleware'],
+      note: 'The answer omitted CORS configuration.',
+    }],
+  };
+  const resolvedGap = await continueSession(resolvedState, 'Use CORSMiddleware with explicit allowed origins.', mockAI(adaptiveTurn({
+    quality: 'strong',
+    action: 'finish',
+    day: 3,
+    reply: '',
+    understood: ['CORS', 'CORSMiddleware', 'allowed origins', 'security implications'],
+    missing: [],
+    note: 'The follow-up resolved the earlier CORS gap.',
+  })));
+  assert.match(resolvedGap.response.feedback.strengths.join(' '), /CORSMiddleware/);
+  assert.doesNotMatch(resolvedGap.response.feedback.gaps.join(' '), /CORS|CORSMiddleware/);
 
   // Malformed structured output retries once, then falls back without losing the session.
   const malformedSession = `gemini-malformed-${Date.now()}`;

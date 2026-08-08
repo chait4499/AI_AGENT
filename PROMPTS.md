@@ -2381,3 +2381,288 @@ Tests performed:
 - `npm run build` — passed TypeScript and Vite production build.
 
 The POST request contract and required feedback keys remain unchanged. The response may include optional safe observation metadata when a current assessment exists. Gemini authentication/model behavior, Supabase persistence, organizer data, and secret handling were not changed.
+
+## Prompt 10 — Fix Gemini Final Feedback Fallback
+
+Tool: Codex
+
+Full prompt:
+
+PROMPT 10 — Fix Gemini Final Feedback Fallback
+
+This is a focused production reliability bug fix.
+
+The adaptive Gemini interview itself is working correctly.
+
+Manual test results for Ethan Brooks:
+- Gemini answer assessment works.
+- observations are persisted correctly.
+- adaptive FOLLOW-UP works.
+- DEEPEN / NEW TOPIC behavior works.
+- 8 questions across 6 curriculum days completed.
+- Evidence & Adaptation UI works.
+
+However, on interview completion, Gemini-generated final feedback fails and the application falls back to deterministic feedback.
+
+The UI currently displays fallback copy such as:
+
+"This fallback prioritizes available interview observations..."
+
+and:
+
+"Automated feedback generation was unavailable..."
+
+The completed session contains valid Gemini observations for all interview turns, but no generated feedback is stored in session state.
+
+DO NOT change interview intelligence, UI design, candidate logic, Supabase architecture, API contract, or organizer data.
+
+==================================================
+1. FIND THE ACTUAL ROOT CAUSE
+==================================================
+
+Inspect the final-feedback path in:
+- server/gemini.ts
+- interview completion logic
+- api/interview.ts
+- any feedback validation/parsing code
+
+Determine precisely why Gemini final feedback falls back while per-answer Gemini assessment succeeds.
+
+Check specifically for:
+- timeout
+- malformed JSON
+- structured-output validation failure
+- response parsing assumptions
+- finish reason / empty content
+- excessive prompt size
+- model response format differences
+- gemini-3.5-flash compatibility
+
+Do not guess and patch blindly.
+
+==================================================
+2. IMPROVE FINAL FEEDBACK RELIABILITY
+==================================================
+
+Keep the existing interview-turn timeout behavior unless necessary.
+
+For FINAL FEEDBACK generation, allow a more appropriate timeout because the request includes:
+- transcript
+- observations
+- candidate learning history
+- covered curriculum
+- evidence
+
+If the current shared timeout is 12 seconds, do not assume that is sufficient for final feedback.
+
+Use a separate final-feedback timeout, reasonably around 25–30 seconds.
+
+Do not make normal interview turns unnecessarily slower.
+
+Keep bounded retry behavior.
+
+==================================================
+3. STRUCTURED RESPONSE ROBUSTNESS
+==================================================
+
+Final feedback must still ultimately satisfy exactly:
+
+{
+  "summary": string,
+  "strengths": string[],
+  "gaps": string[],
+  "next": string[]
+}
+
+Validate the result.
+
+But make parsing resilient to common Gemini JSON response variations where safe.
+
+Examples:
+- surrounding markdown fences
+- leading/trailing whitespace
+- otherwise valid JSON that can be safely extracted
+
+Do NOT accept structurally invalid feedback.
+
+Do NOT fabricate values merely to satisfy validation.
+
+If Gemini returns usable structured data, do not fall back unnecessarily.
+
+==================================================
+4. SAFE DEVELOPMENT LOGGING
+==================================================
+
+The current failure is silent in local development.
+
+Add concise DEVELOPMENT-ONLY server logging for Gemini failures.
+
+For example:
+
+[Gemini] final feedback failed: timeout
+[Gemini] invalid final feedback JSON
+[Gemini] final feedback validation failed
+
+Never log:
+- GEMINI_API_KEY
+- SUPABASE_SECRET_KEY
+- authorization headers
+- full candidate answers
+- full Gemini prompts
+- sensitive environment variables
+
+Production users should still receive the graceful fallback without raw errors.
+
+This logging is only to make future fallback causes diagnosable.
+
+==================================================
+5. DO NOT DISCARD EXISTING OBSERVATIONS
+==================================================
+
+The current stored observations are excellent and must continue to drive final feedback.
+
+Current live observations should outweigh historical mission attempts.
+
+Example manual-test evidence included:
+
+Day 3:
+partial:
+missing CORS and CORSMiddleware
+
+then later Day 3:
+strong:
+correctly demonstrated CORS, CORSMiddleware, allowed origins and security implications
+
+Final feedback should recognize that the gap was resolved rather than report CORS as a current weakness.
+
+Similarly:
+Day 8 had an initial strong fundamental answer with ANN/indexing concepts still missing,
+followed by a strong deepening response that resolved ANN/HNSW/IVF/recall trade-offs.
+
+Use the latest/current evidence appropriately.
+
+==================================================
+6. OPTIONAL SESSION STORAGE
+==================================================
+
+If final feedback currently exists only in the API response, consider persisting the successfully generated feedback into session state as well.
+
+This is optional but desirable for:
+- debugging
+- reproducibility
+- refresh/review behavior
+
+Do this only if it is a small backwards-compatible change.
+
+Do NOT alter the required public API response.
+
+==================================================
+7. TESTS
+==================================================
+
+Add focused tests verifying:
+
+1. successful Gemini final feedback is returned instead of fallback.
+2. final feedback has exactly:
+   summary:string
+   strengths:string[]
+   gaps:string[]
+   next:string[]
+3. malformed Gemini feedback still falls back safely.
+4. final-feedback timeout uses the larger dedicated timeout.
+5. normal interview assessment timeout behavior remains unchanged.
+6. markdown-fenced but otherwise valid JSON can be parsed safely if applicable.
+7. resolved gaps are not incorrectly reported as current gaps.
+8. development logging contains no secrets.
+9. /api/interview contract remains unchanged.
+
+Run:
+
+npm run test:interview
+npm run build
+
+==================================================
+8. MANUAL SMOKE-TEST SUPPORT
+==================================================
+
+If practical, add a minimal optional way to exercise the final-feedback Gemini function using mocked/session fixture data without changing production behavior.
+
+Do NOT make real Gemini calls part of the normal automated test suite.
+
+==================================================
+9. PROMPTS.md
+==================================================
+
+Append this entire prompt as:
+
+Prompt 10 — Fix Gemini Final Feedback Fallback
+Tool: Codex
+
+Include:
+- diagnosed root cause
+- implementation
+- files changed
+- tests
+- build result
+
+Do not overwrite previous prompts.
+Never include secrets.
+
+==================================================
+10. GIT
+==================================================
+
+Before commit:
+- verify .env.local remains ignored
+- verify no secrets are staged
+- verify organizer data is untouched
+- inspect diff for unrelated changes
+
+After tests/build pass:
+
+Commit:
+Fix Gemini final feedback reliability
+
+Push to origin/main.
+
+==================================================
+FINAL REPORT
+==================================================
+
+Report:
+- exact root cause
+- files changed
+- timeout/parsing changes if any
+- logging added
+- whether successful feedback is persisted
+- tests
+- build
+- commit hash
+- push status
+
+Do not deploy.
+Do not add unrelated features.
+
+Diagnosed root cause:
+- A sanitized reproduction using the stored Ethan Brooks session received HTTP 429 `RESOURCE_EXHAUSTED` with Gemini `RetryInfo` requesting a 4-second delay.
+- The client retried immediately, so the bounded second attempt was also rejected and silently returned `null`, triggering deterministic fallback. The observed failure completed before the old 12-second deadline, so timeout was not the triggering cause.
+
+Implementation summary:
+- Added a dedicated 30-second final-feedback timeout while retaining the 12-second assessment timeout.
+- Added bounded 429 retry delay handling for `Retry-After` and Gemini `RetryInfo`, plus development-only static failure diagnostics.
+- Added safe parsing for whitespace, Markdown-fenced JSON, and extractable JSON objects while retaining exact structural validation.
+- Allowed zero current gaps without fabrication, emphasized latest same-day observations, and persisted the returned final feedback in session state.
+- Sustained upstream quota exhaustion still uses the existing graceful deterministic fallback.
+
+Files changed:
+- server/gemini.ts
+- server/interviewEngine.ts
+- scripts/test-interview.mjs
+- PROMPTS.md
+
+Tests performed:
+- `npm run test:interview` — passed final-feedback success/fallback, exact shape, dedicated timeouts, fenced JSON, rate-limit recovery, resolved-gap, safe logging, API, adaptive interview, and storage coverage.
+- `npm run build` — passed TypeScript and Vite production build.
+- A sanitized real-fixture smoke test exercised the delayed retry; the provider quota remained exhausted on the bounded retry, so graceful fallback remained active.
+
+No API keys, secret values, prompts, candidate answers, authorization headers, or sensitive environment-variable values were logged or committed.
