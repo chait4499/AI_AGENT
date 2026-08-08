@@ -1187,3 +1187,670 @@ Tests performed:
 - `npm run build` — passed TypeScript and Vite production build.
 
 No API keys, environment-variable values, or other secrets were added to source, tests, logs, PROMPTS.md, or Git.
+
+## Prompt 08 — Modern Interview Agent Interface
+
+Tool: Codex
+
+Purpose:
+Redesign the application presentation into a modern, clean, ABTalks-inspired AI interview product without modifying working interview intelligence.
+
+Full prompt:
+
+PROMPT 08 — Modern Interview Agent UI Redesign
+
+We are polishing the existing Interview Agent hackathon project.
+
+IMPORTANT:
+The backend and interview intelligence are already working correctly.
+
+Do NOT modify:
+- Gemini integration
+- Supabase persistence
+- /api/interview contract
+- interview session logic
+- candidate-learning interpretation
+- adaptive follow-up logic
+- completion rules
+- feedback intelligence
+- organizer-provided curriculum/candidate JSON
+- tests unrelated to presentation
+
+This task is UI/UX only.
+
+==================================================
+DESIGN DIRECTION
+==================================================
+
+Redesign the application into a modern, clean, polished AI product.
+
+Visual inspiration:
+
+- ABTalks editorial cleanliness
+- Linear / Vercel-quality SaaS polish
+- modern vibe-coded AI product
+- professional hiring/education tool
+
+Do NOT copy ABTalks branding, logo, or exact assets.
+
+Use:
+- light mode
+- off-white / very light gray page background
+- white surfaces
+- strong near-black typography
+- restrained violet/purple primary accent
+- green for positive learning signals
+- amber for high-attempt/probing signals
+- red only when genuinely representing failure
+- subtle borders
+- very soft shadows
+- generous whitespace
+- consistent rounded corners
+- strong typography hierarchy
+
+Avoid:
+- gradients everywhere
+- glassmorphism
+- neon AI aesthetics
+- excessive shadows
+- tiny text
+- excessive pill badges
+- generic Bootstrap/admin-panel appearance
+
+The finished app should feel intentionally designed rather than template-generated.
+
+==================================================
+GLOBAL LAYOUT
+==================================================
+
+On desktop:
+
+Use a compact persistent left sidebar.
+
+Approximate structure:
+
+┌─────────────────┬─────────────────────────────────────┐
+│ Interview Agent │                                     │
+│                 │        Current page                  │
+│ Candidates      │                                     │
+│                 │                                     │
+│ AI Cohort       │                                     │
+│ 31-day journey  │                                     │
+└─────────────────┴─────────────────────────────────────┘
+
+Sidebar should be approximately 220–250px wide.
+
+Keep it MINIMAL.
+
+Do NOT add fake navigation/functionality such as:
+- Add Candidate
+- Settings
+- Theme toggle
+- Interview History
+- Dashboard analytics
+- recruiter management
+
+unless such functionality already exists and works.
+
+Primary navigation can simply contain:
+Candidates
+
+During other screens provide relevant back-navigation/context rather than fake sections.
+
+The main content should use the available desktop width well.
+
+Target content max width around 1200–1350px depending on page.
+
+Responsive:
+- 3 candidate columns on wide desktop
+- 2 columns on medium screens
+- 1 column on narrow/mobile
+- sidebar may collapse appropriately on small widths
+
+==================================================
+SCREEN 1 — CANDIDATE SELECTION
+==================================================
+
+Current page feels too small and sparse.
+
+Create a strong header:
+
+Choose a candidate
+
+Subtitle:
+Select a learning profile to start a personalized technical interview.
+
+Then:
+
+20 candidates                         [ Search by name or role... ]
+
+Candidate cards:
+
+Use 3 columns on wide screens.
+
+Each card should prominently show:
+
+[avatar] Candidate Name             →
+         Role
+         X years experience
+
+-------------------------------------
+
+✓ 29 / 31             ⚡ 10
+  missions               first-try
+
+[31-day learning journey visualization]
+
+Cards should:
+- be larger than current cards
+- have good padding
+- clearly appear clickable
+- subtle border
+- slight hover lift/border change
+- cursor pointer
+- arrow on right
+- strong candidate name
+- readable secondary text
+
+Avatar around 44–48px.
+
+Do not make all information tiny gray text.
+
+==================================================
+31-DAY LEARNING JOURNEY STRIP
+==================================================
+
+This is an important visual differentiator.
+
+Every candidate card should show a compact 31-day progress strip based on REAL candidate data.
+
+It must not be decorative or fabricated.
+
+Represent actual learning states with the project's existing interpretation:
+
+Green:
+passed on first attempt
+
+Amber:
+passed after multiple attempts
+
+Red:
+failed mission
+
+Gray:
+no recorded mission / neutral state
+
+Skipped:
+visually distinct from normal unrecorded state if explicit skipped data exists
+
+Do not treat unlisted days as failed.
+
+Do not change data interpretation logic.
+
+The strip should be visually compact and elegant.
+
+==================================================
+SCREEN 2 — CANDIDATE LEARNING PROFILE
+==================================================
+
+Create a spacious professional layout.
+
+Top:
+
+← Candidates
+
+Candidate identity hero:
+
+[Avatar] Alex Turner
+         Backend Software Engineer
+         5 years experience · B.Tech Computer Science
+
+Primary action:
+Start Interview →
+
+Then three larger metric blocks:
+
+29
+Missions completed
+of 31
+
+22
+Active days
+
+10
+First-try passes
+
+==================================================
+LEARNING JOURNEY
+==================================================
+
+Add a prominent section:
+
+Learning journey
+31-day AI Engineering Cohort
+
+Display the complete 31-day strip larger than on candidate cards.
+
+Include a small clean legend.
+
+Then show the existing candidate interpretation in clean columns/cards:
+
+VALIDATE STRENGTHS
+
+Day 16
+Chatbot Backend & API Integration
+Passed first try
+
+
+PROBE
+
+Day 12
+Prompt Engineering Fundamentals
+Passed after 5 attempts
+
+
+SKIPPED
+
+Only explicitly skipped missions.
+
+Do not mislabel data.
+
+Use terminology that feels interview-oriented:
+
+Validate
+Probe
+Skipped
+
+instead of overly verbose descriptions.
+
+==================================================
+INTERVIEWER BRIEF
+==================================================
+
+Keep the existing briefing concept, but style it as a clean informational callout.
+
+Example:
+
+Interviewer brief
+
+Questions will prioritize areas that required multiple attempts,
+validate first-try strengths, and adapt based on live responses.
+
+Keep concise.
+
+==================================================
+SCREEN 3 — LIVE INTERVIEW
+==================================================
+
+This is the core product screen.
+
+Keep the existing functionality but make the question visually dominant.
+
+Top bar:
+
+← Exit
+
+LIVE INTERVIEW
+
+Alex Turner
+Backend Software Engineer
+
+Main layout approximately:
+
+70–75% question area
+25–30% context/sidebar
+
+Question card:
+
+AI INTERVIEWER             DAY 13
+
+QUESTION 4
+
+How would you recover from a tool call whose
+arguments fail schema validation?
+
+Function Calling & Structured Outputs
+
+Difficulty: Advanced
+
+
+Your answer
+
+[ large clean textarea ]
+
+                                  Submit answer →
+
+Do NOT use lots of tiny badges.
+
+Question typography should be large enough to be the focal point.
+
+==================================================
+INTERVIEW SIDEBAR
+==================================================
+
+Keep compact information such as:
+
+PROGRESS
+
+Question 4
+Advanced
+
+Covered curriculum
+12  13  16
+
+
+CONVERSATION
+
+Compact transcript
+
+The transcript should:
+- remain scrollable
+- be secondary to the question
+- visually distinguish interviewer/candidate turns
+- not look like generic chat bubbles
+
+If interview length can exceed 8 questions, do NOT show misleading fixed text such as:
+
+4 / 8
+
+Prefer:
+
+Question 4
+
+and optionally:
+Minimum 8 questions
+
+Only if useful.
+
+==================================================
+LOADING STATE
+==================================================
+
+When waiting for Gemini after answer submission:
+
+Show a polished loading state.
+
+Examples:
+- disabled Submit button
+- subtle spinner
+- "Analyzing response…"
+
+Do not alter backend timing/behavior.
+
+==================================================
+SCREEN 4 — INTERVIEW FEEDBACK
+==================================================
+
+Make this look like a professional interview report.
+
+Header:
+
+✓ Interview complete
+
+Alex Turner
+Backend Software Engineer · 5 years experience
+
+Then:
+
+OVERALL ASSESSMENT
+
+[summary text in strong readable card]
+
+Then two balanced columns:
+
+STRENGTHS                       AREAS TO STRENGTHEN
+
+✓ specific evidence             △ specific evidence
+✓ specific evidence             △ specific evidence
+✓ specific evidence             △ specific evidence
+
+Then:
+
+RECOMMENDED NEXT STEPS
+
+01  Recommendation
+02  Recommendation
+03  Recommendation
+
+Keep the backend-provided content exactly as returned.
+
+Do not fabricate additional scores.
+
+Do not add percentage scores or rating bars.
+
+Primary footer action:
+
+Start new interview
+
+==================================================
+TYPOGRAPHY
+==================================================
+
+Improve typography substantially.
+
+Use existing font setup if reasonable.
+
+Otherwise prefer a modern system/font stack already available without adding unnecessary dependencies.
+
+Approximate hierarchy:
+
+Page title:
+32–40px
+strong weight
+
+Section title:
+18–22px
+
+Candidate name:
+16–18px
+semibold
+
+Question:
+24–30px depending on viewport
+
+Body:
+14–16px
+
+Metadata:
+12–14px
+
+Avoid excessive uppercase text.
+
+Use uppercase only for small labels such as:
+
+LIVE INTERVIEW
+PROGRESS
+STRENGTHS
+
+with restrained letter spacing.
+
+==================================================
+COLOR / COMPONENT SYSTEM
+==================================================
+
+Create/reuse consistent design tokens where practical.
+
+Suggested conceptual palette:
+
+background:
+#F7F7F8 / similar warm-light neutral
+
+surface:
+#FFFFFF
+
+primary text:
+near-black
+
+secondary text:
+neutral gray
+
+primary accent:
+restrained violet
+
+positive:
+green
+
+attention/probe:
+amber
+
+danger/failure:
+red
+
+Do not mechanically use these exact colors if the current project has suitable variables.
+Choose a coherent accessible palette.
+
+Buttons:
+
+Primary:
+violet background
+white text
+medium rounded corners
+clear hover state
+
+Secondary:
+white/neutral
+border
+
+==================================================
+INTERACTION POLISH
+==================================================
+
+Add subtle professional interactions:
+
+- candidate-card hover
+- button hover
+- focus-visible states
+- input/textarea focus ring
+- smooth but restrained transitions
+
+No excessive animations.
+
+==================================================
+ACCESSIBILITY
+==================================================
+
+Maintain readable contrast.
+
+Ensure:
+- keyboard focus states
+- buttons remain buttons
+- clickable candidate cards remain keyboard accessible
+- form labels are preserved
+- responsive layout does not hide important content
+
+==================================================
+IMPORTANT FUNCTIONAL CONSTRAINT
+==================================================
+
+This task MUST remain presentation-only.
+
+Do not alter any interview decisions or candidate logic.
+
+Before making changes, inspect how props/state flow between components.
+
+Preserve existing behavior.
+
+Do not convert working components into unnecessary architecture.
+
+Keep implementation simple enough for the hackathon Live Steer challenge.
+
+==================================================
+TESTING
+==================================================
+
+After implementation run:
+
+npm run test:interview
+
+npm run build
+
+Also inspect for obvious TypeScript/React errors.
+
+Do not alter tests merely to make failures disappear.
+
+==================================================
+AI USAGE LOG
+==================================================
+
+Append this ENTIRE prompt to PROMPTS.md as:
+
+Prompt 08 — Modern Interview Agent Interface
+Tool: Codex
+
+Purpose:
+Redesign the application presentation into a modern, clean, ABTalks-inspired AI interview product without modifying working interview intelligence.
+
+Include:
+- full prompt
+- concise implementation summary
+- files changed
+- test results
+- build result
+
+Do not overwrite previous entries.
+
+Never include:
+- API keys
+- Supabase secrets
+- Gemini secrets
+- environment variable values
+
+==================================================
+GIT
+==================================================
+
+Before committing:
+
+Verify .env.local is ignored and unstaged.
+
+Review git diff to ensure Gemini/API/Supabase/interview intelligence were not unintentionally modified.
+
+After tests/build pass commit with:
+
+Polish Interview Agent interface
+
+Push to origin/main.
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+Report:
+
+- UI files changed
+- selection-screen improvements
+- candidate-profile improvements
+- interview-screen improvements
+- feedback-screen improvements
+- responsive behavior
+- whether any backend/logic files changed
+- test result
+- build result
+- commit hash
+- push status
+
+Do not implement deployment in this task.
+
+Implementation summary:
+- Added a compact responsive application sidebar and a cohesive light visual system with restrained violet accents, stronger typography, soft borders, and accessible interaction states.
+- Expanded candidate selection into a responsive 3/2/1-column layout with search, richer cards, and organizer-data-backed 31-day journey strips.
+- Reworked the candidate profile, live interview, loading state, transcript context, and final feedback report without changing state flow or backend-returned content.
+- Rendered first-attempt passes green, multiple-attempt passes amber, failures red, unrecorded days gray, and explicit skips with a distinct striped treatment.
+
+Files changed:
+- src/App.tsx
+- src/components/Brief.tsx
+- src/components/Feedback.tsx
+- src/components/Interview.tsx
+- src/components/Selection.tsx
+- src/components/ui.tsx
+- src/data.ts
+- src/index.css
+- PROMPTS.md
+
+Tests performed:
+- `npm run test:interview` — passed.
+- `npm run build` — passed TypeScript and Vite production build.
+- Browser-based visual QA could not run because no browser surface was available; responsive and accessibility behavior was reviewed in source.
+
+No backend, Gemini, Supabase, API-contract, session-flow, organizer-data, interview-intelligence, dependency, or unrelated test files were changed. No secret values were added to source, logs, PROMPTS.md, or Git.

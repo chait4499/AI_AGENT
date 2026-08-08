@@ -3,16 +3,16 @@ import { Selection } from './components/Selection';
 import { Brief } from './components/Brief';
 import { Interview } from './components/Interview';
 import { FeedbackView } from './components/Feedback';
+import { AppShell } from './components/ui';
 
 export default function App() {
   const flow = useInterviewFlow();
+  let content;
 
   if (flow.view === 'selection') {
-    return <Selection onSelect={flow.selectCandidate} />;
-  }
-
-  if (flow.view === 'brief' && flow.candidate) {
-    return (
+    content = <Selection onSelect={flow.selectCandidate} />;
+  } else if (flow.view === 'brief' && flow.candidate) {
+    content = (
       <Brief
         candidate={flow.candidate}
         onStart={flow.startInterview}
@@ -21,10 +21,8 @@ export default function App() {
         error={flow.error}
       />
     );
-  }
-
-  if (flow.view === 'interview' && flow.candidate && flow.state) {
-    return (
+  } else if (flow.view === 'interview' && flow.candidate && flow.state) {
+    content = (
       <Interview
         candidate={flow.candidate}
         state={flow.state}
@@ -34,17 +32,21 @@ export default function App() {
         onExit={flow.reset}
       />
     );
-  }
-
-  if (flow.view === 'feedback' && flow.candidate && flow.state?.feedback) {
-    return (
+  } else if (flow.view === 'feedback' && flow.candidate && flow.state?.feedback) {
+    content = (
       <FeedbackView
         candidate={flow.candidate}
         feedback={flow.state.feedback}
         onReset={flow.reset}
       />
     );
+  } else {
+    content = <Selection onSelect={flow.selectCandidate} />;
   }
 
-  return <Selection onSelect={flow.selectCandidate} />;
+  return (
+    <AppShell candidatesActive={flow.view === 'selection'} onCandidates={flow.reset}>
+      {content}
+    </AppShell>
+  );
 }

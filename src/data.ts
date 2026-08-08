@@ -61,7 +61,7 @@ export function getDayStatus(candidate: Candidate, day: number): 'passed' | 'war
   if (mission.passed === false) return 'failed';
   if (mission.passed === true) {
     const attempts = mission.attempts ?? 1;
-    return attempts >= 3 ? 'warning' : 'passed';
+    return attempts === 1 ? 'passed' : 'warning';
   }
   return 'none';
 }
