@@ -4110,3 +4110,216 @@ Tests performed:
 - Live browser screenshots were unavailable because no browser surface was connected; no unrelated browser driver was substituted.
 
 No backend, AI, API, Supabase, organizer JSON, interview logic, dependency, or environment file was changed. No credential or environment-variable value was logged or committed.
+
+## Prompt 14 — Fix Vercel Production ESM Module Resolution
+
+Tool: Codex
+
+Full prompt:
+
+PROMPT 14 — Fix Vercel Production ESM Module Resolution
+
+This is a focused production deployment bug fix.
+
+Current production deployment succeeds, but POST /api/interview returns HTTP 500.
+
+Vercel runtime log:
+
+ERR_MODULE_NOT_FOUND:
+Cannot find module '/var/task/server/interviewEngine.ts'
+
+The project works correctly with `npx vercel dev`.
+
+ROOT CAUSE TO VERIFY:
+The frameworkless Vercel API function is compiled to JavaScript for the production Node runtime, but server-side ESM imports currently reference local source modules using `.ts` extensions.
+
+For example api/interview.ts currently imports:
+
+../server/interviewEngine.ts
+../server/gemini.ts
+../server/sessionStore.ts
+
+Production Node then attempts to resolve literal `.ts` paths from `/var/task`.
+
+==================================================
+1. FIX NODE ESM-SAFE IMPORT SPECIFIERS
+==================================================
+
+Audit ALL files involved in the production server/API dependency graph:
+
+- api/interview.ts
+- server/interviewEngine.ts
+- server/gemini.ts
+- server/sessionStore.ts
+- any other server-side module imported by those files
+
+For LOCAL TypeScript module imports that survive into runtime JavaScript, use Node ESM-safe `.js` specifiers.
+
+Example:
+
+BAD:
+import { initializeSession } from '../server/interviewEngine.ts';
+
+GOOD:
+import { initializeSession } from '../server/interviewEngine.js';
+
+TypeScript should resolve the `.js` specifier back to the corresponding `.ts` source during development/type checking, while emitted/transpiled production JavaScript resolves the actual `.js` runtime module.
+
+Do NOT blindly change JSON imports.
+
+Do NOT change package imports.
+
+`import type` statements are erased at runtime, but prefer consistent Node-compatible local specifiers where appropriate.
+
+Do not use extensionless imports for runtime Node ESM modules unless verified safe, because Node ESM normally requires explicit extensions.
+
+==================================================
+2. AUDIT TRANSITIVE IMPORTS
+==================================================
+
+Fix the entire server dependency chain, not only api/interview.ts.
+
+For example, gemini.ts currently imports interviewEngine.ts and server files may import src/types.ts.
+
+Any runtime local ESM import that would remain as `.ts` after transpilation must be corrected.
+
+Avoid creating the situation where:
+
+api/interview.js
+works
+
+but then:
+
+server/gemini.js
+fails trying to import interviewEngine.ts
+
+==================================================
+3. DO NOT CHANGE APPLICATION BEHAVIOR
+==================================================
+
+Do NOT modify:
+
+- Gemini prompts
+- Gemini model fallback
+- retry logic
+- Supabase storage
+- session schema
+- adaptive logic
+- feedback logic
+- landing page
+- themes
+- UI
+- organizer data
+- API request/response contract
+
+This is module-resolution/deployment compatibility only.
+
+==================================================
+4. BUILD / DEPLOYMENT VALIDATION
+==================================================
+
+Run:
+
+npm run test:interview
+npm run build
+
+Then, if available, also run:
+
+npx vercel build --prod
+
+or the closest local Vercel production-build validation supported by the linked project.
+
+Inspect the generated serverless output if practical and verify the production API bundle no longer references runtime paths ending in:
+
+interviewEngine.ts
+gemini.ts
+sessionStore.ts
+
+The resulting JavaScript runtime imports must resolve successfully.
+
+==================================================
+5. REGRESSION CHECK
+==================================================
+
+Confirm:
+
+- local tests pass
+- Vite build passes
+- no API contract changes
+- no frontend changes
+- no environment-variable changes
+- no secrets staged
+- .env.local remains ignored
+
+==================================================
+6. PROMPTS.md
+==================================================
+
+Append this entire prompt as:
+
+Prompt 14 — Fix Vercel Production ESM Module Resolution
+Tool: Codex
+
+Include:
+- confirmed root cause
+- files changed
+- import-resolution changes
+- tests
+- build result
+
+Never include secrets.
+
+==================================================
+7. GIT
+==================================================
+
+If all validation passes:
+
+Commit:
+
+Fix Vercel server module resolution
+
+Push to origin/main.
+
+==================================================
+FINAL REPORT
+==================================================
+
+Report:
+
+- confirmed root cause
+- every file whose import specifiers changed
+- whether `.js` ESM specifiers were used
+- tests
+- local build
+- Vercel production-build result if run
+- commit hash
+- push result
+
+Do not deploy automatically unless specifically necessary for validation.
+Do not make unrelated changes.
+
+Confirmed root cause:
+- Vercel transpiles the frameworkless API and server modules to JavaScript while preserving local ESM import specifiers. Runtime imports in `api/interview.ts` named `.ts` files, so emitted `api/interview.js` attempted to resolve TypeScript paths that are not production runtime modules.
+- The same `.ts` convention was present in transitive local type imports. Although erased at runtime, those were made consistently Node-compatible.
+
+Import-resolution changes:
+- Changed all local TypeScript module specifiers in the API/server production graph from `.ts` to explicit `.js`.
+- Left organizer curriculum JSON imports unchanged.
+- Did not change package imports, application behavior, the API contract, frontend code, environment configuration, or dependencies.
+
+Files changed:
+- api/interview.ts
+- server/interviewEngine.ts
+- server/gemini.ts
+- server/sessionStore.ts
+- PROMPTS.md
+
+Tests and builds:
+- `npm run test:interview` — passed the complete existing Interview API, adaptive Gemini, fallback, evidence, and session-storage coverage.
+- `npm run build` — passed TypeScript checking and the Vite production build.
+- `npx --no-install vercel build --prod --yes` — passed using the linked production project settings.
+- Generated Vercel output contains `api/interview.js`, `server/interviewEngine.js`, `server/gemini.js`, and `server/sessionStore.js`.
+- Emitted `api/interview.js` uses explicit `.js` imports, no emitted runtime JavaScript references the three forbidden `.ts` paths, and a direct Node import of the generated API entry succeeded.
+
+No secrets or environment-variable values were logged or committed.

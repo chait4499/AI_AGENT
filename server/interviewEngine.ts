@@ -1,5 +1,5 @@
 import curriculumData from '../data/raw/curriculum.json' with { type: 'json' };
-import type { ApiResponse, AssessmentEvidence, Candidate, Curriculum, CurriculumDay, Difficulty, Feedback, Turn } from '../src/types.ts';
+import type { ApiResponse, AssessmentEvidence, Candidate, Curriculum, CurriculumDay, Difficulty, Feedback, Turn } from '../src/types.js';
 
 export const MIN_INTERVIEW_QUESTIONS = 8;
 export const MAX_INTERVIEW_QUESTIONS = 12;

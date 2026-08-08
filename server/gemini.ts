@@ -1,6 +1,6 @@
 import curriculumData from '../data/raw/curriculum.json' with { type: 'json' };
-import type { Curriculum, Feedback } from '../src/types.ts';
-import type { AdaptiveInterviewAI, AdaptiveTurn, SessionState } from './interviewEngine.ts';
+import type { Curriculum, Feedback } from '../src/types.js';
+import type { AdaptiveInterviewAI, AdaptiveTurn, SessionState } from './interviewEngine.js';
 
 declare const process: { env: Record<string, string | undefined> };
 

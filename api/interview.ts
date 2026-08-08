@@ -1,7 +1,7 @@
-import type { ApiRequest, Candidate } from '../src/types.ts';
-import { continueSession, initializeSession } from '../server/interviewEngine.ts';
-import { getGeminiClient } from '../server/gemini.ts';
-import { getSessionStore, StorageError } from '../server/sessionStore.ts';
+import type { ApiRequest, Candidate } from '../src/types.js';
+import { continueSession, initializeSession } from '../server/interviewEngine.js';
+import { getGeminiClient } from '../server/gemini.js';
+import { getSessionStore, StorageError } from '../server/sessionStore.js';
 
 interface RequestLike {
   method?: string;

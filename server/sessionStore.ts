@@ -1,4 +1,4 @@
-import type { SessionState } from './interviewEngine.ts';
+import type { SessionState } from './interviewEngine.js';
 
 declare const process: { env: Record<string, string | undefined> };
 
