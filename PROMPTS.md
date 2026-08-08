@@ -382,3 +382,580 @@ Implementation summary:
 Tests/build result:
 - npm run test:interview — passed, including Supabase secret-key header coverage and existing session behavior checks.
 - npm run build — passed TypeScript and Vite production build.
+
+Prompt 06 — Gemini Adaptive Interviewer and Real Feedback
+Tool: Codex
+
+Purpose:
+Integrate Gemini for adaptive answer assessment, intelligent follow-ups, dynamic difficulty and interview-grounded final feedback.
+
+Full prompt:
+
+PROMPT 06 — Gemini Adaptive Interviewer + Real Feedback
+
+We are continuing the existing Interview Agent hackathon project.
+
+IMPORTANT:
+Inspect the current repository and preserve the working architecture.
+
+The project already has:
+- working React frontend
+- candidate selection
+- candidate brief
+- POST /api/interview
+- Supabase session persistence
+- deterministic 8-question interview
+- minimum 4 curriculum-day enforcement
+- deterministic fallback feedback
+- tests
+- working Vercel local environment
+
+Do NOT redesign or rebuild the application.
+
+GOAL
+
+Replace the deterministic interview intelligence with Gemini-powered adaptive interviewing while preserving the existing API contract, state persistence, hard requirements, and deterministic fallback.
+
+The interview must feel like a real technical interview rather than a scripted questionnaire.
+
+--------------------------------------------------
+GEMINI CONFIGURATION
+--------------------------------------------------
+
+Use server-side environment variable:
+
+GEMINI_API_KEY
+
+Never expose it to frontend code.
+
+Never print the key.
+
+Never write it to:
+- PROMPTS.md
+- source files
+- tests
+- Git history
+- logs
+
+Keep the Gemini model name isolated/configurable in one place.
+
+Prefer a fast, cost-efficient Gemini Flash model suitable for multi-turn structured generation.
+
+If appropriate, support:
+
+GEMINI_MODEL
+
+as an optional environment variable so the model can be changed without editing application logic.
+
+Do not add a heavy AI framework.
+
+Use the Gemini API directly with the minimum dependencies required.
+
+--------------------------------------------------
+CORE INTERVIEW LOOP
+--------------------------------------------------
+
+Each candidate answer should now drive the next interview decision.
+
+For every answer:
+
+1. Load the current InterviewSession from Supabase.
+2. Give Gemini relevant context:
+   - candidate role
+   - years of experience
+   - education
+   - mission history
+   - first-try missions
+   - high-attempt missions
+   - failed missions
+   - explicitly skipped missions
+   - relevant curriculum objectives
+   - current question
+   - previous transcript
+   - curriculum days already covered
+   - question count
+   - current difficulty
+   - previous assessment observations
+
+3. Ask Gemini to evaluate the latest answer.
+
+4. Ask Gemini to decide whether to:
+   - ask a focused follow-up on the current topic
+   - move to a new curriculum topic
+   - deepen the difficulty
+   - reduce difficulty
+   - finish the interview
+
+5. Generate the next question dynamically from that decision.
+
+Do NOT generate all questions at initialization.
+
+--------------------------------------------------
+STRUCTURED GEMINI OUTPUT
+--------------------------------------------------
+
+Require structured JSON.
+
+Use a schema conceptually similar to:
+
+{
+  "assessment": {
+    "quality": "weak | partial | good | strong",
+    "conceptsUnderstood": ["..."],
+    "conceptsMissing": ["..."],
+    "note": "short evidence-based observation"
+  },
+  "decision": {
+    "action": "follow_up | new_topic | finish",
+    "day": 12,
+    "difficulty": "foundation | standard | advanced | deep"
+  },
+  "reply": "next interviewer question"
+}
+
+Validate Gemini output before using it.
+
+Never blindly trust model-generated values.
+
+The server code remains authoritative for:
+- question count
+- covered curriculum days
+- candidate identity
+- session state
+- completion rules
+
+--------------------------------------------------
+FOLLOW-UP BEHAVIOR
+--------------------------------------------------
+
+This is the most important product behavior.
+
+If the answer is weak or incomplete:
+
+Ask a focused follow-up targeting the missing concept.
+
+Example:
+
+Question:
+How do embeddings help retrieval?
+
+Candidate:
+"They convert text into numbers."
+
+Bad next question:
+"What is MCP?"
+
+Good next question:
+"What property of those numerical vectors allows semantically similar text to be retrieved even when the exact words differ?"
+
+If the answer is strong:
+
+Increase depth using:
+- trade-offs
+- architecture decisions
+- failure modes
+- scale
+- reliability
+- production consequences
+
+Example:
+
+Candidate gives a strong explanation of vector search.
+
+Possible follow-up:
+"When would hybrid retrieval outperform pure vector search, and what signals would you use to route between them?"
+
+--------------------------------------------------
+CANDIDATE PERSONALIZATION
+--------------------------------------------------
+
+Difficulty and question style must depend on:
+
+- yearsExperience
+- jobRole
+- learning history
+- latest interview performance
+
+Examples:
+
+Senior/experienced technical candidate:
+- architecture
+- production trade-offs
+- system design
+- failure modes
+- scalability
+
+Junior candidate:
+- fundamentals
+- simpler implementation scenarios
+- progressive difficulty
+
+Do not ask obviously beginner questions to very senior candidates unless their answers demonstrate a genuine foundational gap.
+
+Do not punish candidates permanently because of historical high-attempt missions.
+
+Historical mission performance should determine what to probe initially.
+
+Actual interview answers should become the stronger signal as the interview progresses.
+
+--------------------------------------------------
+CURRICULUM GROUNDING
+--------------------------------------------------
+
+Every substantive interview question must map internally to a real curriculum day from the supplied curriculum JSON.
+
+Use the actual:
+- title
+- objectives
+- tools
+
+Do not fabricate curriculum content.
+
+Do not modify organizer-provided JSON files.
+
+Follow-up questions may remain on the same curriculum day when appropriate.
+
+--------------------------------------------------
+COMPLETION RULES
+--------------------------------------------------
+
+KEEP THE EXISTING HARD SERVER RULES.
+
+Gemini must NOT be allowed to finish unless:
+
+questionCount >= 8
+
+AND
+
+coveredDays contains at least 4 unique curriculum days.
+
+If Gemini returns:
+
+action = "finish"
+
+before those conditions are satisfied:
+
+ignore the finish request and continue interviewing.
+
+Aim for roughly 8–12 substantive questions.
+
+Do not force exactly 8 if a useful follow-up is needed.
+
+Prevent endless loops:
+- cap repeated follow-ups on the same concept/topic reasonably
+- move forward if the interview is stuck
+
+--------------------------------------------------
+CONVERSATIONAL CONTEXT
+--------------------------------------------------
+
+Gemini should naturally use previous answers where useful.
+
+Example:
+
+"Earlier you said you would use Pinecone because you wanted a managed service. How would that choice affect your deployment and monitoring strategy?"
+
+But:
+
+- never claim the candidate said something they did not say
+- never invent interview evidence
+- do not unnecessarily repeat prior answers
+
+--------------------------------------------------
+INTERVIEWER STYLE
+--------------------------------------------------
+
+The interviewer should be:
+
+- professional
+- concise
+- technically credible
+- neutral
+- conversational
+
+Avoid:
+
+- excessive praise
+- "Great answer!" after every response
+- giving away the correct answer before probing
+- long lectures
+- multiple unrelated questions in one turn
+- generic chatbot language
+
+Ask one primary question at a time.
+
+--------------------------------------------------
+REAL FINAL FEEDBACK
+--------------------------------------------------
+
+Replace deterministic pre-AI feedback with feedback grounded in the actual interview.
+
+Required public response remains exactly:
+
+{
+  "reply": "Interview completed.",
+  "done": true,
+  "feedback": {
+    "summary": "...",
+    "strengths": [],
+    "gaps": [],
+    "next": []
+  }
+}
+
+Generate feedback from:
+- interview answers
+- answer assessments
+- learning history
+- curriculum topics covered
+
+SUMMARY
+
+Should give a concise overall assessment.
+
+STRENGTHS
+
+2–5 specific strengths demonstrated in the interview.
+
+Example:
+"Explained the trade-off between dense retrieval and metadata filtering clearly."
+
+Do not use generic claims unsupported by transcript evidence.
+
+GAPS
+
+2–5 specific gaps.
+
+Example:
+"Could explain vector similarity but struggled to describe how chunk size affects retrieval quality."
+
+NEXT
+
+2–5 actionable recommendations.
+
+When possible connect recommendations to real curriculum days/topics.
+
+Do not fabricate numeric scores or percentages.
+
+--------------------------------------------------
+FAILURE / FALLBACK BEHAVIOR
+--------------------------------------------------
+
+The interview must not die if Gemini fails.
+
+Handle:
+
+- Gemini timeout
+- network error
+- invalid JSON
+- empty output
+- malformed structured response
+- rate limit
+- temporary API failure
+
+Suggested strategy:
+
+1. Safely retry Gemini once when appropriate.
+2. If still unsuccessful, use the existing deterministic curriculum-based question generator.
+3. Preserve the interview session.
+4. Continue rather than crash.
+
+For final feedback failure:
+
+fall back to conservative learning-history-based feedback rather than returning an error.
+
+Do NOT expose raw Gemini errors or secrets to the user.
+
+--------------------------------------------------
+FRONTEND
+--------------------------------------------------
+
+Preserve the existing UI.
+
+Update only what is necessary to display real backend state.
+
+Current UI should continue showing:
+
+- question number
+- difficulty
+- covered curriculum days
+- current question
+- transcript
+- answer input
+- feedback screen
+
+Do not redesign the pages.
+
+If the new backend can return more than 8 questions, change UI wording/progress only if necessary so it does not falsely imply the interview always ends exactly at 8.
+
+For example:
+"Question 8"
+instead of misleading "8 / 8" if the interview can continue.
+
+Keep this change minimal.
+
+--------------------------------------------------
+SESSION STATE
+--------------------------------------------------
+
+Persist useful AI observations in the existing session state.
+
+Add only what is needed, for example:
+
+observations: [
+  {
+    day: 7,
+    quality: "partial",
+    conceptsUnderstood: [...],
+    conceptsMissing: [...],
+    note: "..."
+  }
+]
+
+Keep it simple.
+
+Do not introduce vector memory, Breeth, RAG, or long-term accounts.
+
+--------------------------------------------------
+TESTING
+--------------------------------------------------
+
+Extend tests without requiring every test to make a real paid/external Gemini call.
+
+Use mocking/stubbing for most automated Gemini tests.
+
+Verify at minimum:
+
+1. Gemini weak answer -> focused follow-up.
+2. Gemini strong answer -> deeper question.
+3. new_topic changes curriculum topic.
+4. follow_up can remain on the same curriculum day.
+5. premature finish is rejected before:
+   - 8 questions
+   - 4 unique days
+6. valid finish works after minimum requirements.
+7. malformed Gemini output triggers fallback.
+8. Gemini network/API failure triggers fallback.
+9. session state persists assessments/observations.
+10. two sessionIds remain isolated.
+11. final feedback has exactly:
+    - summary:string
+    - strengths:string[]
+    - gaps:string[]
+    - next:string[]
+12. final feedback is generated from interview evidence rather than hardcoded candidate text.
+
+Run:
+- interview tests
+- TypeScript/build checks
+
+If practical, add one optional/manual real-Gemini smoke-test path that is not required for normal automated tests.
+
+--------------------------------------------------
+DO NOT ADD
+--------------------------------------------------
+
+Do not add:
+
+- OpenAI
+- Anthropic
+- LangChain
+- LangGraph
+- CrewAI
+- Breeth
+- vector databases
+- RAG
+- authentication
+- user accounts
+- voice
+- video
+- recruiter dashboard
+- unrelated UI features
+- unnecessary dependencies
+
+--------------------------------------------------
+AI USAGE LOG
+--------------------------------------------------
+
+After implementation and successful tests:
+
+Append this ENTIRE user prompt to PROMPTS.md as:
+
+Prompt 06 — Gemini Adaptive Interviewer and Real Feedback
+Tool: Codex
+
+Purpose:
+Integrate Gemini for adaptive answer assessment, intelligent follow-ups, dynamic difficulty and interview-grounded final feedback.
+
+Include:
+- complete prompt
+- concise implementation summary
+- files changed
+- tests performed
+- build result
+- note that Gemini secrets are supplied only through environment variables
+
+Never overwrite previous log entries.
+
+Never include:
+- GEMINI_API_KEY
+- SUPABASE_SECRET_KEY
+- any secret/token value
+
+--------------------------------------------------
+GIT
+--------------------------------------------------
+
+After tests/build pass:
+
+1. Review git status.
+2. Ensure .env.local and all secrets are excluded.
+3. Commit intended code changes + PROMPTS.md.
+4. Use commit message:
+
+Integrate adaptive Gemini interviewer
+
+5. Push to origin/main.
+
+If push requires unexpected Git configuration/authentication changes, stop and report instead.
+
+--------------------------------------------------
+FINAL RESPONSE
+--------------------------------------------------
+
+Return a concise report containing:
+
+- files changed
+- Gemini architecture
+- adaptive interview behavior implemented
+- feedback behavior implemented
+- fallback behavior
+- tests and build results
+- environment variables required
+- commit hash
+- push status
+- any remaining risks or manual test steps
+
+Do not begin deployment configuration or unrelated polishing in this task.
+
+Implementation summary:
+- Added a server-only direct Gemini REST adapter using structured JSON output, strict validation, a timeout, one safe retry, and deterministic fallback.
+- Added adaptive answer assessment, focused follow-ups, curriculum topic changes, dynamic difficulty, persisted observations, hard 8-question/4-day minimums, and a 12-question ceiling.
+- Added interview-evidence final feedback with conservative learning-history feedback when Gemini is unavailable or invalid.
+- Updated progress wording so interviews can continue beyond eight questions without showing a misleading fixed total.
+
+Files changed:
+- api/interview.ts
+- server/gemini.ts
+- server/interviewEngine.ts
+- scripts/test-interview.mjs
+- src/App.tsx
+- src/components/Interview.tsx
+- src/useInterviewFlow.ts
+- PROMPTS.md
+
+Tests performed:
+- npm run test:interview — passed adaptive decisions, completion enforcement, observation persistence, structured-output and network fallbacks, final feedback, session isolation, and existing storage checks.
+- npm run build — passed TypeScript and Vite production build.
+
+Gemini secrets are supplied only through server-side environment variables; no secret values were added to source, tests, logs, PROMPTS.md, or Git.

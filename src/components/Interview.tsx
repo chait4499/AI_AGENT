@@ -8,7 +8,6 @@ export function Interview({
   state,
   loading,
   error,
-  totalQuestions,
   onSubmit,
   onExit,
 }: {
@@ -16,7 +15,6 @@ export function Interview({
   state: InterviewState;
   loading: boolean;
   error: string | null;
-  totalQuestions: number;
   onSubmit: (answer: string) => Promise<boolean>;
   onExit: () => void;
 }) {
@@ -70,7 +68,7 @@ export function Interview({
               </div>
               <div className="mt-6">
                 <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-ink-400">
-                  Question {questionNumber} of {totalQuestions}
+                  Question {questionNumber}
                 </div>
                 <p className="mt-3 text-xl font-medium leading-relaxed text-ink-900">
                   {questionTurn.content}
@@ -114,7 +112,6 @@ export function Interview({
         <aside className="hidden w-72 shrink-0 lg:block">
           <SidePanel
             state={state}
-            totalQuestions={totalQuestions}
             transcript={transcript}
             loading={loading}
           />
@@ -133,7 +130,6 @@ export function Interview({
           <div className="border-t border-ink-100 px-6 py-4">
             <SidePanel
               state={state}
-              totalQuestions={totalQuestions}
               transcript={transcript}
               loading={loading}
             />
@@ -146,12 +142,10 @@ export function Interview({
 
 function SidePanel({
   state,
-  totalQuestions,
   transcript,
   loading,
 }: {
   state: InterviewState;
-  totalQuestions: number;
   transcript: { role: string; content: string; day?: number; topic?: string }[];
   loading: boolean;
 }) {
@@ -162,7 +156,7 @@ function SidePanel({
         <div className="mt-3 space-y-2">
           <div className="flex items-center justify-between text-sm">
             <span className="text-ink-500">Question</span>
-            <span className="font-medium text-ink-900">{state.currentIndex + 1} / {totalQuestions}</span>
+            <span className="font-medium text-ink-900">{state.currentIndex + 1}</span>
           </div>
           <div className="flex items-center justify-between text-sm">
             <span className="text-ink-500">Difficulty</span>

@@ -1,5 +1,6 @@
 import type { ApiRequest, Candidate } from '../src/types.ts';
 import { continueSession, initializeSession } from '../server/interviewEngine.ts';
+import { getGeminiClient } from '../server/gemini.ts';
 import { getSessionStore, StorageError } from '../server/sessionStore.ts';
 
 interface RequestLike {
@@ -69,7 +70,7 @@ export default async function handler(req: RequestLike, res: ResponseLike) {
     if (!existing) return error(res, 404, 'Interview session not found.');
     if (existing.done) return error(res, 409, 'Interview session is already complete.');
 
-    const continued = continueSession(existing, message.trim());
+    const continued = await continueSession(existing, message.trim(), getGeminiClient());
     await store.save(continued.state);
     return res.status(200).json(continued.response);
   } catch (caught) {

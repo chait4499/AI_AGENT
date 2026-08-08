@@ -8,17 +8,24 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const projectRoot = fileURLToPath(new URL('..', import.meta.url));
 const temporaryDirectory = mkdtempSync(join(tmpdir(), 'interview-agent-test-'));
 const bundledHandler = join(temporaryDirectory, 'interview-api.mjs');
-execFileSync(join(projectRoot, 'node_modules/.bin/esbuild'), [
-  join(projectRoot, 'api/interview.ts'),
-  '--bundle',
-  '--platform=node',
-  '--format=esm',
-  `--outfile=${bundledHandler}`,
-]);
+const bundledEngine = join(temporaryDirectory, 'interview-engine.mjs');
+const esbuild = join(projectRoot, 'node_modules/.bin/esbuild');
+
+for (const [entryPoint, output] of [
+  [join(projectRoot, 'api/interview.ts'), bundledHandler],
+  [join(projectRoot, 'server/interviewEngine.ts'), bundledEngine],
+]) {
+  execFileSync(esbuild, [entryPoint, '--bundle', '--platform=node', '--format=esm', `--outfile=${output}`]);
+}
 
 const candidatesData = JSON.parse(readFileSync(join(projectRoot, 'data/raw/candidates_(1).json'), 'utf8'));
 const curriculumData = JSON.parse(readFileSync(join(projectRoot, 'data/raw/curriculum.json'), 'utf8'));
 const { default: handler } = await import(pathToFileURL(bundledHandler).href);
+const {
+  MAX_INTERVIEW_QUESTIONS,
+  continueSession,
+  initializeSession,
+} = await import(pathToFileURL(bundledEngine).href);
 
 class TestResponse {
   statusCode = 200;
@@ -42,13 +49,62 @@ async function request(body, method = 'POST') {
   return response;
 }
 
-function assertCurriculumQuestion(response) {
+function curriculumDay(dayNumber) {
+  return curriculumData.days.find((entry) => entry.day === dayNumber);
+}
+
+function assertQuestion(response, deterministic = false) {
   assert.equal(response.statusCode, 200);
   assert.equal(response.body.done, false);
   assert.ok(response.body.question);
-  const day = curriculumData.days.find((entry) => entry.day === response.body.question.day);
+  const day = curriculumDay(response.body.question.day);
   assert.ok(day, `Day ${response.body.question.day} must exist in the curriculum.`);
-  assert.ok(day.objectives.some((objective) => response.body.reply.includes(objective)));
+  if (deterministic) {
+    assert.ok(day.objectives.some((objective) => response.body.reply.includes(objective)));
+  }
+}
+
+function adaptiveTurn({
+  quality = 'partial',
+  action = 'follow_up',
+  day,
+  difficulty = 'standard',
+  reply = 'What specific technical detail would you add?',
+  understood = ['basic concept'],
+  missing = ['implementation detail'],
+  note = 'The answer identified the concept but omitted an implementation detail.',
+}) {
+  return {
+    assessment: {
+      quality,
+      conceptsUnderstood: understood,
+      conceptsMissing: missing,
+      note,
+    },
+    decision: { action, day, difficulty },
+    reply,
+  };
+}
+
+function mockAI(turn, feedback = null) {
+  return {
+    assess: async () => turn,
+    feedback: async () => feedback,
+  };
+}
+
+function geminiResponse(value) {
+  return new Response(JSON.stringify({
+    candidates: [{ content: { parts: [{ text: JSON.stringify(value) }] } }],
+  }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+}
+
+function eligibleForFinish(state) {
+  return {
+    ...state,
+    questionCount: 8,
+    coveredDays: state.targetDays.slice(0, 4),
+  };
 }
 
 const originalEnvironment = {
@@ -57,59 +113,251 @@ const originalEnvironment = {
   supabaseUrl: process.env.SUPABASE_URL,
   supabaseSecretKey: process.env.SUPABASE_SECRET_KEY,
   legacySupabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  geminiApiKey: process.env.GEMINI_API_KEY,
+  geminiModel: process.env.GEMINI_MODEL,
 };
+const originalFetch = globalThis.fetch;
 
 delete process.env.SUPABASE_URL;
 delete process.env.SUPABASE_SECRET_KEY;
 delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+delete process.env.GEMINI_API_KEY;
+delete process.env.GEMINI_MODEL;
 process.env.NODE_ENV = 'development';
 delete process.env.VERCEL_ENV;
 
 try {
-  const sessionA = `test-a-${Date.now()}`;
-  const sessionB = `test-b-${Date.now()}`;
+  const candidate = candidatesData.candidates[1];
 
+  // Weak answers receive a focused follow-up on the same curriculum day.
+  const weakStart = initializeSession('weak-answer', candidate).state;
+  const weakReply = 'What property of the vectors enables semantic similarity retrieval?';
+  const weak = await continueSession(weakStart, 'They convert text into numbers.', mockAI(adaptiveTurn({
+    quality: 'weak',
+    day: weakStart.currentDay,
+    difficulty: 'foundation',
+    reply: weakReply,
+    understood: ['embeddings are numeric representations'],
+    missing: ['semantic distance'],
+    note: 'The answer mentioned numeric conversion but not semantic similarity.',
+  })));
+  assert.equal(weak.response.reply, weakReply);
+  assert.equal(weak.response.question.day, weakStart.currentDay);
+  assert.equal(weak.state.observations[0].quality, 'weak');
+  assert.deepEqual(weak.state.observations[0].conceptsMissing, ['semantic distance']);
+
+  let previousObservationWasAvailable = false;
+  await continueSession(weak.state, 'A more detailed second answer.', {
+    assess: async (state) => {
+      previousObservationWasAvailable = state.observations.some((observation) => observation.note.includes('semantic similarity'));
+      return adaptiveTurn({
+        action: 'new_topic',
+        day: state.targetDays.find((day) => day !== state.currentDay),
+        reply: 'How would you validate retrieval quality with a fixed evaluation set?',
+      });
+    },
+    feedback: async () => null,
+  });
+  assert.equal(previousObservationWasAvailable, true);
+
+  // Strong answers can deepen difficulty while remaining on the same topic.
+  const strongStart = initializeSession('strong-answer', candidate).state;
+  const deeperReply = 'How would you detect and mitigate embedding drift in production?';
+  const strong = await continueSession(strongStart, 'A detailed answer with trade-offs.', mockAI(adaptiveTurn({
+    quality: 'strong',
+    day: strongStart.currentDay,
+    difficulty: 'deep',
+    reply: deeperReply,
+    understood: ['architecture trade-offs', 'failure modes'],
+    missing: [],
+    note: 'The answer explained the architecture trade-offs and failure modes.',
+  })));
+  assert.equal(strong.response.reply, deeperReply);
+  assert.equal(strong.response.question.difficulty, 'Deep');
+  assert.equal(strong.response.question.day, strongStart.currentDay);
+
+  // A valid new_topic decision changes to another selected curriculum day.
+  const topicStart = initializeSession('new-topic', candidate).state;
+  const nextDay = topicStart.targetDays.find((day) => day !== topicStart.currentDay);
+  const topic = await continueSession(topicStart, 'Answer', mockAI(adaptiveTurn({
+    action: 'new_topic',
+    day: nextDay,
+    difficulty: 'advanced',
+    reply: 'How would you validate structured output before executing a tool call?',
+  })));
+  assert.equal(topic.response.question.day, nextDay);
+  assert.equal(topic.state.currentTopic, curriculumDay(nextDay).title);
+
+  // Repeated same-topic follow-ups are capped and forced onto a new target day.
+  const stuckStart = initializeSession('stuck-topic', candidate).state;
+  const repeatedQuestion = stuckStart.transcript[0];
+  const stuckState = {
+    ...stuckStart,
+    questionCount: 3,
+    transcript: [
+      repeatedQuestion,
+      { role: 'candidate', content: 'First answer' },
+      { ...repeatedQuestion, content: 'Second question on the same topic' },
+      { role: 'candidate', content: 'Second answer' },
+      { ...repeatedQuestion, content: 'Third question on the same topic' },
+    ],
+    askedQuestions: [repeatedQuestion.content, 'Second question on the same topic', 'Third question on the same topic'],
+  };
+  const forcedForward = await continueSession(stuckState, 'Third answer', mockAI(adaptiveTurn({
+    day: stuckState.currentDay,
+    reply: 'A fourth same-topic follow-up that should be ignored?',
+  })));
+  assert.notEqual(forcedForward.response.question.day, stuckState.currentDay);
+  assert.notEqual(forcedForward.response.reply, 'A fourth same-topic follow-up that should be ignored?');
+
+  // Premature finish is rejected independently for question count and day coverage.
+  const finishStart = initializeSession('premature-finish', candidate).state;
+  const finishTurn = adaptiveTurn({ action: 'finish', day: finishStart.currentDay, reply: '' });
+  const tooFewQuestions = await continueSession({
+    ...finishStart,
+    questionCount: 7,
+    coveredDays: finishStart.targetDays.slice(0, 4),
+  }, 'Answer seven', mockAI(finishTurn));
+  assert.equal(tooFewQuestions.response.done, false);
+  assert.equal(tooFewQuestions.state.questionCount, 8);
+
+  const tooFewDays = await continueSession({
+    ...finishStart,
+    questionCount: 8,
+    coveredDays: finishStart.targetDays.slice(0, 3),
+  }, 'Eighth answer', mockAI(finishTurn));
+  assert.equal(tooFewDays.response.done, false);
+  assert.equal(tooFewDays.state.questionCount, 9);
+  assert.ok(tooFewDays.state.coveredDays.length >= 4);
+
+  // A valid finish uses interview-evidence feedback and returns exactly the public shape.
+  const evidenceFeedback = {
+    summary: 'The candidate connected retrieval design decisions to concrete failure modes.',
+    strengths: [
+      'Explained dense retrieval and metadata filtering trade-offs clearly.',
+      'Identified monitoring signals for retrieval failures.',
+    ],
+    gaps: [
+      'Did not explain how chunk overlap affects recall.',
+      'Needed prompting to discuss reranking latency.',
+    ],
+    next: [
+      'Revisit Day 10 retrieval evaluation objectives.',
+      'Practice latency-aware reranking design scenarios.',
+    ],
+  };
+  const validFinish = await continueSession(
+    eligibleForFinish(initializeSession('valid-finish', candidate).state),
+    'Final evidence-bearing answer',
+    mockAI(finishTurn, evidenceFeedback),
+  );
+  assert.equal(validFinish.response.done, true);
+  assert.deepEqual(Object.keys(validFinish.response.feedback).sort(), ['gaps', 'next', 'strengths', 'summary']);
+  assert.deepEqual(validFinish.response.feedback, evidenceFeedback);
+  assert.ok(validFinish.state.observations.length > 0);
+
+  // The 12-question ceiling prevents endless model-requested follow-ups once hard minimums are met.
+  const cappedState = {
+    ...eligibleForFinish(initializeSession('capped', candidate).state),
+    questionCount: MAX_INTERVIEW_QUESTIONS,
+  };
+  const capped = await continueSession(cappedState, 'Another answer', mockAI(adaptiveTurn({
+    day: cappedState.currentDay,
+    reply: 'Another follow-up?',
+  }), evidenceFeedback));
+  assert.equal(capped.response.done, true);
+  assert.equal(capped.state.questionCount, MAX_INTERVIEW_QUESTIONS);
+
+  // Existing API validation, deterministic fallback completion, and session isolation remain intact.
+  const sessionA = `fallback-a-${Date.now()}`;
+  const sessionB = `fallback-b-${Date.now()}`;
   assert.equal((await request({ candidate: candidatesData.candidates[0] })).statusCode, 400);
   assert.equal((await request({ sessionId: 'missing-candidate' })).statusCode, 400);
   assert.equal((await request({ sessionId: 'unknown', message: 'answer' })).statusCode, 404);
   assert.equal((await request({ sessionId: 'unknown', message: '   ' })).statusCode, 400);
 
   const startA = await request({ sessionId: sessionA, candidate: candidatesData.candidates[0] });
-  const startB = await request({ sessionId: sessionB, candidate: candidatesData.candidates[1] });
-  assertCurriculumQuestion(startA);
-  assertCurriculumQuestion(startB);
-  assert.equal(startA.body.questionCount, 1);
-  assert.equal(startB.body.questionCount, 1);
-
-  const askedDays = [startA.body.question.day];
+  const startB = await request({ sessionId: sessionB, candidate });
+  assertQuestion(startA, true);
+  assertQuestion(startB, true);
   let responseA = startA;
+  let eighthQuestion = startA;
   for (let answerNumber = 1; answerNumber <= 8; answerNumber += 1) {
     responseA = await request({ sessionId: sessionA, message: `Answer ${answerNumber}` });
     if (answerNumber < 8) {
-      assertCurriculumQuestion(responseA);
-      askedDays.push(responseA.body.question.day);
-      assert.equal(responseA.body.questionCount, answerNumber + 1);
+      assertQuestion(responseA, true);
+      eighthQuestion = responseA;
     }
   }
-
-  assert.equal(askedDays.length, 8);
-  assert.ok(new Set(askedDays).size >= 4);
-  assert.equal(responseA.statusCode, 200);
-  assert.equal(responseA.body.reply, 'Interview completed.');
   assert.equal(responseA.body.done, true);
-  assert.equal(responseA.body.questionCount, 8);
-  assert.ok(responseA.body.coveredDays.length >= 4);
-  assert.equal(typeof responseA.body.feedback.summary, 'string');
-  assert.ok(Array.isArray(responseA.body.feedback.strengths));
-  assert.ok(Array.isArray(responseA.body.feedback.gaps));
-  assert.ok(Array.isArray(responseA.body.feedback.next));
+  assert.equal(eighthQuestion.body.questionCount, 8);
+  assert.ok(eighthQuestion.body.coveredDays.length >= 4);
+  assert.deepEqual(Object.keys(responseA.body).sort(), ['done', 'feedback', 'reply']);
+  assert.deepEqual(Object.keys(responseA.body.feedback).sort(), ['gaps', 'next', 'strengths', 'summary']);
 
   const continueB = await request({ sessionId: sessionB, message: 'Independent answer' });
-  assertCurriculumQuestion(continueB);
+  assertQuestion(continueB, true);
   assert.equal(continueB.body.questionCount, 2);
 
-  const originalFetch = globalThis.fetch;
-  const testSecretKey = 'unit-test-secret-key';
+  // The real Gemini adapter accepts valid structured output without external calls.
+  const adaptiveSession = `gemini-valid-${Date.now()}`;
+  await request({ sessionId: adaptiveSession, candidate });
+  const validGeminiTurn = adaptiveTurn({
+    quality: 'weak',
+    day: candidate.missions[0].day,
+    difficulty: 'foundation',
+    reply: 'Which distance metric would you choose here, and why?',
+  });
+  const geminiRequests = [];
+  process.env.GEMINI_API_KEY = ['unit', 'test', 'gemini'].join('-');
+  process.env.GEMINI_MODEL = 'gemini-test-override';
+  globalThis.fetch = async (url, options) => {
+    geminiRequests.push({ url, options });
+    return geminiResponse(validGeminiTurn);
+  };
+  const adaptiveResponse = await request({ sessionId: adaptiveSession, message: 'It maps text to vectors.' });
+  assertQuestion(adaptiveResponse);
+  assert.equal(adaptiveResponse.body.reply, validGeminiTurn.reply);
+  assert.equal(geminiRequests.length, 1);
+  assert.ok(geminiRequests[0].url.includes('gemini-test-override'));
+  assert.ok(geminiRequests[0].options.headers['x-goog-api-key']);
+
+  // Malformed structured output retries once, then falls back without losing the session.
+  const malformedSession = `gemini-malformed-${Date.now()}`;
+  globalThis.fetch = originalFetch;
+  delete process.env.GEMINI_API_KEY;
+  delete process.env.GEMINI_MODEL;
+  await request({ sessionId: malformedSession, candidate });
+  process.env.GEMINI_API_KEY = ['unit', 'test', 'gemini'].join('-');
+  let malformedCalls = 0;
+  globalThis.fetch = async () => {
+    malformedCalls += 1;
+    return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: 'not-json' }] } }] }), { status: 200 });
+  };
+  const malformedFallback = await request({ sessionId: malformedSession, message: 'Answer' });
+  assertQuestion(malformedFallback, true);
+  assert.equal(malformedCalls, 2);
+
+  // Network failure retries once and uses the same deterministic fallback path.
+  const networkSession = `gemini-network-${Date.now()}`;
+  globalThis.fetch = originalFetch;
+  delete process.env.GEMINI_API_KEY;
+  await request({ sessionId: networkSession, candidate });
+  process.env.GEMINI_API_KEY = ['unit', 'test', 'gemini'].join('-');
+  let networkCalls = 0;
+  globalThis.fetch = async () => {
+    networkCalls += 1;
+    throw new Error('Simulated network failure');
+  };
+  const networkFallback = await request({ sessionId: networkSession, message: 'Answer' });
+  assertQuestion(networkFallback, true);
+  assert.equal(networkCalls, 2);
+
+  // Supabase still receives only its server-side secret through apikey.
+  globalThis.fetch = originalFetch;
+  delete process.env.GEMINI_API_KEY;
+  delete process.env.GEMINI_MODEL;
+  const testSecretKey = ['unit', 'test', 'secret'].join('-');
   let supabaseRequest;
   process.env.SUPABASE_URL = 'https://example.supabase.co';
   process.env.SUPABASE_SECRET_KEY = testSecretKey;
@@ -118,32 +366,33 @@ try {
     supabaseRequest = options;
     return new Response(null, { status: 201 });
   };
-
   const supabaseStart = await request({ sessionId: 'supabase-header-test', candidate: candidatesData.candidates[0] });
   assert.equal(supabaseStart.statusCode, 200);
   assert.equal(supabaseRequest.headers.apikey, testSecretKey);
   assert.equal('Authorization' in supabaseRequest.headers, false);
-  globalThis.fetch = originalFetch;
 
+  globalThis.fetch = originalFetch;
   delete process.env.SUPABASE_URL;
   delete process.env.SUPABASE_SECRET_KEY;
-  process.env.SUPABASE_SERVICE_ROLE_KEY = 'legacy-key-must-not-be-used';
-  process.env.NODE_ENV = 'production';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = ['legacy', 'unused'].join('-');
   const storageFailure = await request({ sessionId: 'production-without-storage', candidate: candidatesData.candidates[0] });
   assert.equal(storageFailure.statusCode, 500);
   assert.deepEqual(storageFailure.body, { error: 'Production session storage is not configured.' });
 
-  console.log('Interview API session tests passed.');
+  console.log('Interview API and adaptive Gemini tests passed.');
 } finally {
-  if (originalEnvironment.nodeEnv === undefined) delete process.env.NODE_ENV;
-  else process.env.NODE_ENV = originalEnvironment.nodeEnv;
-  if (originalEnvironment.vercelEnv === undefined) delete process.env.VERCEL_ENV;
-  else process.env.VERCEL_ENV = originalEnvironment.vercelEnv;
-  if (originalEnvironment.supabaseUrl === undefined) delete process.env.SUPABASE_URL;
-  else process.env.SUPABASE_URL = originalEnvironment.supabaseUrl;
-  if (originalEnvironment.supabaseSecretKey === undefined) delete process.env.SUPABASE_SECRET_KEY;
-  else process.env.SUPABASE_SECRET_KEY = originalEnvironment.supabaseSecretKey;
-  if (originalEnvironment.legacySupabaseKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
-  else process.env.SUPABASE_SERVICE_ROLE_KEY = originalEnvironment.legacySupabaseKey;
+  globalThis.fetch = originalFetch;
+  for (const [name, value] of Object.entries({
+    NODE_ENV: originalEnvironment.nodeEnv,
+    VERCEL_ENV: originalEnvironment.vercelEnv,
+    SUPABASE_URL: originalEnvironment.supabaseUrl,
+    SUPABASE_SECRET_KEY: originalEnvironment.supabaseSecretKey,
+    SUPABASE_SERVICE_ROLE_KEY: originalEnvironment.legacySupabaseKey,
+    GEMINI_API_KEY: originalEnvironment.geminiApiKey,
+    GEMINI_MODEL: originalEnvironment.geminiModel,
+  })) {
+    if (value === undefined) delete process.env[name];
+    else process.env[name] = value;
+  }
   rmSync(temporaryDirectory, { recursive: true, force: true });
 }

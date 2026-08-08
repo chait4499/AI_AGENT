@@ -1,8 +1,6 @@
 import { useCallback, useState } from 'react';
 import type { ApiRequest, ApiResponse, Candidate, InterviewState, Turn, View } from './types';
 
-const TOTAL_QUESTIONS = 8;
-
 function generateSessionId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
@@ -132,7 +130,6 @@ export function useInterviewFlow() {
     state,
     loading,
     error,
-    totalQuestions: TOTAL_QUESTIONS,
     selectCandidate,
     startInterview,
     submitAnswer,

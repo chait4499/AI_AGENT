@@ -30,7 +30,6 @@ export default function App() {
         state={flow.state}
         loading={flow.loading}
         error={flow.error}
-        totalQuestions={flow.totalQuestions}
         onSubmit={flow.submitAnswer}
         onExit={flow.reset}
       />
