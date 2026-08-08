@@ -959,3 +959,231 @@ Tests performed:
 - npm run build — passed TypeScript and Vite production build.
 
 Gemini secrets are supplied only through server-side environment variables; no secret values were added to source, tests, logs, PROMPTS.md, or Git.
+
+## Prompt 07 — Interviewer Tone, Evidence Weighting, and Gemini Default Fix
+
+Tool: Codex
+
+Full prompt:
+
+PROMPT 07 — Interviewer Tone, Evidence Weighting, and Gemini Default Fix
+
+This is a focused polish task for the existing Interview Agent.
+
+Do NOT redesign, refactor broadly, change the API contract, database architecture, or interview flow.
+
+The real Gemini adaptive interview is now working correctly.
+
+We manually tested a full interview and identified three specific issues.
+
+--------------------------------------------------
+1. INTERVIEWER TONE
+--------------------------------------------------
+
+Reduce excessive praise and AI-tutor language.
+
+The interviewer currently says phrases like:
+- "excellent"
+- "spot-on"
+- "robust"
+- "highly robust"
+- "exceptional"
+
+too frequently.
+
+Make the interviewer sound like a professional technical interviewer.
+
+Prefer neutral transitions such as:
+- "Let's go deeper on that."
+- "Let's move to..."
+- "You mentioned X. How would..."
+- "Let's test that in a production scenario."
+- "Now consider..."
+
+Do not praise every correct answer.
+
+Brief acknowledgement is acceptable occasionally when genuinely useful, but the default tone should be neutral, concise, technically credible, and evaluative.
+
+Do not change question quality or adaptive behavior.
+
+--------------------------------------------------
+2. LIVE INTERVIEW EVIDENCE MUST OUTWEIGH LEARNING HISTORY
+--------------------------------------------------
+
+Fix final feedback weighting.
+
+Historical mission attempts should primarily determine what the interviewer probes initially.
+
+Once the candidate demonstrates current understanding during the interview, historical difficulty must NOT automatically be reported as a current knowledge gap.
+
+Priority should be:
+
+1. actual interview answers and assessments
+2. current observed strengths/gaps
+3. historical learning journey as supporting context
+
+Example:
+
+BAD:
+"Historical learning gap on Day 10 because it required 4 attempts."
+
+when the candidate subsequently gave a strong Day 10 answer during the interview.
+
+BETTER:
+"Day 10 historically required multiple attempts, but the candidate demonstrated improved understanding during the interview through a sound hybrid retrieval and reranking strategy."
+
+Historical attempts alone must not create a Knowledge Gap.
+
+A gap should normally require current interview evidence such as:
+- weak assessment
+- partial assessment
+- missing concepts
+- inability to answer a follow-up
+- unresolved misconception
+
+Learning history may contextualize that gap.
+
+Likewise, if a historical weak area is demonstrated strongly in the interview, it may become evidence of progress rather than remain a gap.
+
+Do not invent evidence.
+
+--------------------------------------------------
+3. FEEDBACK TONE
+--------------------------------------------------
+
+Make final feedback professional and calibrated.
+
+Avoid inflated labels like:
+- exceptional
+- outstanding
+- excellent
+- highly capable
+
+unless strongly justified, and generally prefer specific evidence over adjectives.
+
+BAD:
+"Excellent design for high-concurrency systems."
+
+BETTER:
+"Designed a stateless FastAPI architecture using Redis-backed session state, bounded context, and concurrency controls."
+
+Strengths should say WHAT the candidate demonstrated.
+
+Gaps should say WHAT was missing or incomplete.
+
+Next steps should follow directly from observed gaps where possible.
+
+--------------------------------------------------
+4. GEMINI DEFAULT MODEL
+--------------------------------------------------
+
+The current default gemini-2.5-flash is unavailable to new Gemini API users.
+
+Change the default model to:
+
+gemini-3.5-flash
+
+Continue supporting:
+
+GEMINI_MODEL
+
+as an environment override.
+
+Do not alter API authentication or Gemini architecture.
+
+--------------------------------------------------
+5. PRESERVE EVERYTHING ELSE
+--------------------------------------------------
+
+Keep:
+- adaptive follow-ups
+- dynamic difficulty
+- curriculum grounding
+- Supabase persistence
+- minimum 8 questions
+- minimum 4 unique curriculum days
+- maximum/interview loop protections
+- deterministic fallback
+- structured Gemini validation
+- exact public /api/interview contract
+
+Do not add dependencies or features.
+
+--------------------------------------------------
+6. TESTS
+--------------------------------------------------
+
+Add/update focused tests verifying:
+
+1. historical high attempts alone do not produce a current gap when the candidate demonstrates strong understanding in the interview.
+2. a weak/partial current answer can still produce a gap.
+3. feedback strengths are grounded in observed interview evidence.
+4. interviewer instructions discourage repetitive praise.
+5. default Gemini model is gemini-3.5-flash.
+6. GEMINI_MODEL still overrides the default.
+
+Run:
+npm run test:interview
+npm run build
+
+--------------------------------------------------
+7. PROMPTS LOG
+--------------------------------------------------
+
+Append this entire prompt to PROMPTS.md as:
+
+Prompt 07 — Interviewer Tone, Evidence Weighting, and Gemini Default Fix
+Tool: Codex
+
+Include concise implementation and test results.
+
+Never include API keys or secrets.
+
+Do not overwrite prior entries.
+
+--------------------------------------------------
+8. GIT
+--------------------------------------------------
+
+After tests pass:
+
+Confirm .env.local and secrets are not staged.
+
+Commit with:
+
+Polish adaptive interview feedback
+
+Push to origin/main.
+
+--------------------------------------------------
+FINAL REPORT
+--------------------------------------------------
+
+Report:
+- files changed
+- tone changes
+- feedback evidence-weighting changes
+- Gemini default-model change
+- tests/build
+- commit hash
+- push result
+
+Do not begin deployment or add unrelated features.
+
+Implementation summary:
+- Made interviewer instructions neutral and concise, discouraged repetitive praise, and calibrated final-feedback language around specific evidence.
+- Made current interview observations authoritative in Gemini and deterministic fallback feedback; learning history now supplies context but cannot independently create a current gap.
+- Changed the Gemini default model to `gemini-3.5-flash` while preserving the `GEMINI_MODEL` override.
+- Added focused regression coverage for evidence weighting, observed strengths/gaps, tone instructions, and default/override model selection.
+
+Files changed:
+- server/gemini.ts
+- server/interviewEngine.ts
+- scripts/test-interview.mjs
+- PROMPTS.md
+
+Tests performed:
+- `npm run test:interview` — passed.
+- `npm run build` — passed TypeScript and Vite production build.
+
+No API keys, environment-variable values, or other secrets were added to source, tests, logs, PROMPTS.md, or Git.

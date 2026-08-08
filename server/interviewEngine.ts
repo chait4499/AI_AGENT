@@ -179,32 +179,47 @@ function formatAttempts(attempts: number | undefined): string {
 
 function buildFallbackFeedback(state: SessionState): Feedback {
   const { candidate } = state;
-  const strong = candidate.missions.filter((mission) => !mission.skipped && mission.passed === true && mission.attempts === 1);
-  const probing = candidate.missions.filter(
-    (mission) => !mission.skipped && (mission.passed === false || (mission.passed === true && (mission.attempts ?? 0) >= 3)),
+  const latestByDay = new Map<number, AssessmentObservation>();
+  for (const observation of state.observations ?? []) latestByDay.set(observation.day, observation);
+  const observedStrengths = [...latestByDay.values()].filter(
+    (observation) => observation.quality === 'good' || observation.quality === 'strong',
   );
-  const skipped = candidate.missions.filter((mission) => mission.skipped === true);
-  const strengths = [
-    `Cohort records report ${candidate.signals.missionsFirstTry} first-try passes.`,
-    `Cohort records report ${candidate.signals.missionsCompleted} completed missions.`,
-    ...strong.slice(0, 3).map((mission) => `Day ${mission.day}, ${mission.title}, was passed on the first try.`),
-  ].slice(0, 5);
-  const gaps = (probing.length > 0
-    ? probing.slice(0, 5).map((mission) => mission.passed === false
-      ? `Day ${mission.day}, ${mission.title}, was not passed${formatAttempts(mission.attempts)}.`
-      : `Day ${mission.day}, ${mission.title}, was passed after ${mission.attempts} attempts and remains a probing topic.`)
-    : ['The supplied mission history lists no failed or three-plus-attempt missions.']);
-  if (gaps.length < 2) gaps.push('Answer-based knowledge gaps could not be assessed because automated assessment was unavailable.');
-  const next = probing.slice(0, 2).map((mission) => `Revisit Day ${mission.day}, ${mission.title}, based on the supplied learning history.`);
-  if (skipped.length > 0) {
-    next.push(`Decide whether to revisit explicitly skipped mission${skipped.length === 1 ? '' : 's'}: ${skipped.map((mission) => `Day ${mission.day}`).join(', ')}.`);
-  }
-  next.push(`Review the transcript for the covered curriculum days: ${state.coveredDays.map((day) => `Day ${day}`).join(', ')}.`);
-  next.push('Review the interview transcript when answer-based assessment is available.');
+  const observedGaps = [...latestByDay.values()].filter(
+    (observation) => observation.quality === 'weak' || observation.quality === 'partial' || observation.conceptsMissing.length > 0,
+  );
+
+  const strengths = observedStrengths.map((observation) => {
+    const demonstrated = observation.conceptsUnderstood.length > 0
+      ? observation.conceptsUnderstood.join(', ')
+      : observation.note;
+    return `Day ${observation.day}: demonstrated ${demonstrated}.`;
+  });
+  if (strengths.length < 2) strengths.push(`Cohort records report ${candidate.signals.missionsFirstTry} first-try passes.`);
+  if (strengths.length < 2) strengths.push(`Cohort records report ${candidate.signals.missionsCompleted} completed missions.`);
+
+  const gaps = observedGaps.map((observation) => {
+    const mission = candidate.missions.find((entry) => entry.day === observation.day);
+    const missing = observation.conceptsMissing.length > 0
+      ? `missing or incomplete concepts: ${observation.conceptsMissing.join(', ')}`
+      : observation.note;
+    const historicalContext = mission && (mission.passed === false || (mission.passed === true && (mission.attempts ?? 0) >= 3))
+      ? ` Historical records show this topic required additional work${formatAttempts(mission.attempts)}.`
+      : '';
+    return `Day ${observation.day}: ${missing}.${historicalContext}`;
+  });
+  if (gaps.length === 0) gaps.push('No current knowledge gap was established from the available interview observations.');
+  if (gaps.length < 2) gaps.push('Automated feedback generation was unavailable; historical mission attempts were not treated as current gaps.');
+
+  const next = observedGaps.slice(0, 3).map((observation) => {
+    const focus = observation.conceptsMissing.length > 0 ? `, focusing on ${observation.conceptsMissing.join(', ')}` : '';
+    return `Revisit Day ${observation.day}${focus}.`;
+  });
+  if (next.length < 2) next.push(`Review the transcript for the covered curriculum days: ${state.coveredDays.map((day) => `Day ${day}`).join(', ')}.`);
+  if (next.length < 2) next.push('Use a follow-up assessment to confirm any remaining uncertainty from the interview.');
 
   return {
-    summary: `${candidate.member.name} completed ${state.questionCount} questions across ${state.coveredDays.length} curriculum days. Automated answer assessment was unavailable, so this fallback feedback uses supplied learning-history facts only.`,
-    strengths,
+    summary: `${candidate.member.name} completed ${state.questionCount} questions across ${state.coveredDays.length} curriculum days. This fallback prioritizes available interview observations and uses learning history only as supporting context.`,
+    strengths: strengths.slice(0, 5),
     gaps: gaps.slice(0, 5),
     next: next.slice(0, 5),
   };

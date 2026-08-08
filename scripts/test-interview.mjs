@@ -9,11 +9,13 @@ const projectRoot = fileURLToPath(new URL('..', import.meta.url));
 const temporaryDirectory = mkdtempSync(join(tmpdir(), 'interview-agent-test-'));
 const bundledHandler = join(temporaryDirectory, 'interview-api.mjs');
 const bundledEngine = join(temporaryDirectory, 'interview-engine.mjs');
+const bundledGemini = join(temporaryDirectory, 'gemini.mjs');
 const esbuild = join(projectRoot, 'node_modules/.bin/esbuild');
 
 for (const [entryPoint, output] of [
   [join(projectRoot, 'api/interview.ts'), bundledHandler],
   [join(projectRoot, 'server/interviewEngine.ts'), bundledEngine],
+  [join(projectRoot, 'server/gemini.ts'), bundledGemini],
 ]) {
   execFileSync(esbuild, [entryPoint, '--bundle', '--platform=node', '--format=esm', `--outfile=${output}`]);
 }
@@ -26,6 +28,7 @@ const {
   continueSession,
   initializeSession,
 } = await import(pathToFileURL(bundledEngine).href);
+const { DEFAULT_GEMINI_MODEL, getGeminiClient } = await import(pathToFileURL(bundledGemini).href);
 
 class TestResponse {
   statusCode = 200;
@@ -256,6 +259,44 @@ try {
   assert.deepEqual(validFinish.response.feedback, evidenceFeedback);
   assert.ok(validFinish.state.observations.length > 0);
 
+  // Current interview evidence outweighs historical attempts in deterministic fallback feedback.
+  const historicalDifficultyState = {
+    ...eligibleForFinish(initializeSession('historical-difficulty', candidate).state),
+    currentDay: 10,
+    currentTopic: curriculumDay(10).title,
+  };
+  const demonstratedProgress = await continueSession(
+    historicalDifficultyState,
+    'I would combine dense retrieval with metadata filters, then evaluate recall and reranking latency.',
+    mockAI(adaptiveTurn({
+      quality: 'strong',
+      action: 'finish',
+      day: 10,
+      reply: '',
+      understood: ['hybrid retrieval strategy', 'reranking trade-offs'],
+      missing: [],
+      note: 'The answer explained a retrieval strategy and its evaluation trade-offs.',
+    })),
+  );
+  assert.match(demonstratedProgress.response.feedback.strengths.join(' '), /hybrid retrieval strategy/);
+  assert.doesNotMatch(demonstratedProgress.response.feedback.gaps.join(' '), /Day 10|4 attempts/);
+
+  const currentGap = await continueSession(
+    { ...historicalDifficultyState, sessionId: 'current-gap' },
+    'I would use embeddings.',
+    mockAI(adaptiveTurn({
+      quality: 'partial',
+      action: 'finish',
+      day: 10,
+      reply: '',
+      understood: ['dense retrieval'],
+      missing: ['reranking failure modes'],
+      note: 'The answer did not cover reranking failure modes.',
+    })),
+  );
+  assert.match(currentGap.response.feedback.gaps.join(' '), /Day 10/);
+  assert.match(currentGap.response.feedback.gaps.join(' '), /reranking failure modes/);
+
   // The 12-question ceiling prevents endless model-requested follow-ups once hard minimums are met.
   const cappedState = {
     ...eligibleForFinish(initializeSession('capped', candidate).state),
@@ -321,6 +362,49 @@ try {
   assert.equal(geminiRequests.length, 1);
   assert.ok(geminiRequests[0].url.includes('gemini-test-override'));
   assert.ok(geminiRequests[0].options.headers['x-goog-api-key']);
+  const assessmentRequest = JSON.parse(geminiRequests[0].options.body);
+  const assessmentInstructions = assessmentRequest.contents[0].parts[0].text;
+  assert.match(assessmentInstructions, /Default to neutral transitions/);
+  assert.match(assessmentInstructions, /Avoid repetitive praise and inflated acknowledgements/);
+
+  // The default model and feedback prompt preserve overrides while weighting current evidence first.
+  assert.equal(DEFAULT_GEMINI_MODEL, 'gemini-3.5-flash');
+  delete process.env.GEMINI_MODEL;
+  const feedbackState = {
+    ...historicalDifficultyState,
+    observations: [
+      {
+        day: 10,
+        quality: 'strong',
+        conceptsUnderstood: ['hybrid retrieval strategy'],
+        conceptsMissing: [],
+        note: 'The answer demonstrated progress on retrieval design.',
+      },
+      {
+        day: 12,
+        quality: 'partial',
+        conceptsUnderstood: ['prompt structure'],
+        conceptsMissing: ['prompt evaluation criteria'],
+        note: 'The answer omitted evaluation criteria.',
+      },
+    ],
+  };
+  const feedbackRequests = [];
+  globalThis.fetch = async (url, options) => {
+    feedbackRequests.push({ url, options });
+    return geminiResponse(evidenceFeedback);
+  };
+  const geminiClient = getGeminiClient();
+  assert.ok(geminiClient);
+  assert.deepEqual(await geminiClient.feedback(feedbackState), evidenceFeedback);
+  assert.equal(feedbackRequests.length, 1);
+  assert.ok(feedbackRequests[0].url.includes('gemini-3.5-flash'));
+  const feedbackRequest = JSON.parse(feedbackRequests[0].options.body);
+  const feedbackInstructions = feedbackRequest.contents[0].parts[0].text;
+  assert.match(feedbackInstructions, /Historical attempts or failure alone must never create a current gap/);
+  assert.match(feedbackInstructions, /Strengths must state what the candidate demonstrated/);
+  assert.match(feedbackInstructions, /progress_demonstrated/);
+  assert.match(feedbackInstructions, /current_gap_evidence/);
 
   // Malformed structured output retries once, then falls back without losing the session.
   const malformedSession = `gemini-malformed-${Date.now()}`;
