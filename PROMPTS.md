@@ -3311,3 +3311,802 @@ Tests performed:
 - Static theme audit — confirmed theme-aware compiled surface/action classes, preserved 3/2/1 candidate-card responsive classes, no fixed light-only UI colors, and no backend or organizer-data diff.
 
 No API keys, secret values, prompts, candidate answers, authorization headers, or environment-variable values were logged or committed.
+
+## Prompt 13 — Interview Agent Landing Page
+
+Tool: Codex
+
+Purpose:
+Create a polished public-facing product landing page that communicates the Interview Agent's learning-aware adaptive interview value before entering the functional application.
+
+Full prompt:
+
+PROMPT 13 — Interview Agent Marketing Landing Page
+
+We are adding the final public-facing landing page to the existing Interview Agent hackathon project before deployment.
+
+IMPORTANT:
+The actual interview application is already feature-complete and working.
+
+Do NOT redesign or rewrite the existing:
+- Candidate Selection
+- Candidate Brief
+- Live Interview
+- Feedback Report
+- Gemini integration
+- Supabase persistence
+- API contract
+- adaptive interview logic
+- evidence/adaptation layer
+- light/dark theme
+
+This task adds a polished FRONT PAGE that introduces the product and leads into the existing application.
+
+==================================================
+PRODUCT POSITIONING
+==================================================
+
+Product name:
+
+Interview Agent
+
+Core product idea:
+
+"Learning history tells us where to look.
+The interview tells us what they know now."
+
+Primary message:
+
+Adaptive Interviews.
+Real Learning.
+Proven Growth.
+
+Supporting description:
+
+The Interview Agent conducts personalized, curriculum-aligned technical interviews based on each candidate's 31-day learning journey—validating strengths, probing gaps, adapting to live responses, and producing evidence-backed feedback.
+
+The landing page should immediately communicate that this is NOT a generic AI interview chatbot.
+
+==================================================
+DESIGN DIRECTION
+==================================================
+
+Use the approved visual language from the current application:
+
+- modern
+- clean
+- premium vibe-coded SaaS product
+- ABTalks-inspired editorial simplicity
+- Linear / Vercel-style polish
+- restrained violet accent
+- professional AI/education product
+- generous whitespace
+- strong typography
+- subtle borders
+- soft shadows
+- rounded cards
+- light and dark theme support
+
+The landing page should feel like the SAME product as the existing app.
+
+Do not copy ABTalks branding, logo, assets, or exact website structure.
+
+Do not introduce a new unrelated visual system.
+
+==================================================
+ROUTING / ENTRY FLOW
+==================================================
+
+The landing page should become the first screen users see when visiting the application.
+
+Primary CTA:
+
+Start an Interview →
+
+This should transition into the EXISTING Candidate Selection experience.
+
+Do not duplicate Candidate Selection logic.
+
+Use the simplest architecture compatible with the current app.
+
+Avoid adding React Router or another routing dependency unless the project already uses routing.
+
+If the application currently uses simple React state for page transitions, continue using that pattern.
+
+Users must also be able to return to the landing page from the application through the existing brand/logo or an unobtrusive Home interaction if appropriate.
+
+Do not disrupt browser refresh/session interview behavior.
+
+==================================================
+HEADER / NAVIGATION
+==================================================
+
+Create a clean top navigation.
+
+Left:
+
+Interview Agent brand mark + text
+
+Use a simple existing-style AI/star/spark icon created with CSS or the existing icon system.
+
+Do NOT use ABTalks' logo.
+
+Center/right navigation:
+
+How It Works
+Features
+Curriculum
+For Organizers
+About
+
+These should be simple anchor links that smoothly scroll to real sections on the same landing page.
+
+Do NOT create empty pages.
+
+Right side:
+
+theme toggle
+Start an Interview button
+
+The theme toggle must reuse the existing Prompt 12 theme system and preference.
+
+Desktop:
+full navigation
+
+Mobile:
+compact responsive navigation/menu
+
+Keep implementation simple.
+
+==================================================
+HERO SECTION
+==================================================
+
+Create a premium hero section similar in spirit to the approved concept.
+
+Left side:
+
+small eyebrow badge:
+
+31-DAY AI-POWERED INTERVIEWS
+
+Main heading:
+
+Adaptive Interviews.
+Real Learning.
+Proven Growth.
+
+Use restrained violet emphasis on:
+
+Proven Growth.
+
+Supporting copy:
+
+The Interview Agent conducts adaptive, curriculum-aligned technical interviews across a 31-day AI engineering journey—validating strengths, probing gaps, and delivering evidence-backed feedback.
+
+Primary CTA:
+
+Start an Interview →
+
+Secondary CTA:
+
+See How It Works
+
+The secondary CTA scrolls to the How It Works section.
+
+==================================================
+VALUE SIGNALS
+==================================================
+
+Below the hero CTA, show four compact product-value signals.
+
+31 Days
+Structured Journey
+
+Adaptive
+AI Interviewing
+
+Evidence-Based
+Feedback
+
+Safe & Reliable
+Graceful AI Fallbacks
+
+Use tasteful simple icons.
+
+Do not fabricate numerical statistics.
+
+==================================================
+HERO PRODUCT PREVIEW
+==================================================
+
+Right side of hero:
+
+Create a polished visual preview of the actual Interview Agent interface.
+
+It should resemble the existing Live Interview screen.
+
+Example preview content:
+
+Interview in progress
+
+Day 8
+Vector Databases Overview
+
+Question:
+
+"You mentioned that Pinecone is managed and easier to scale,
+while ChromaDB is suited for local development.
+What trade-offs would you consider around privacy and latency?"
+
+Show:
+
+- question area
+- answer input preview
+- Submit Answer button
+- Interview Path mini-sidebar
+- Day 1 completed
+- Day 3 completed
+- Day 8 active
+- later curriculum items
+
+IMPORTANT:
+
+This is a VISUAL PRODUCT PREVIEW.
+
+Do not build another working interview engine here.
+
+Do not make API calls.
+
+Do not duplicate business logic.
+
+Use lightweight static/demo content only.
+
+Ensure it is clearly a product preview and cannot be confused with a real active session.
+
+Keep it visually faithful to the actual app.
+
+==================================================
+HOW IT WORKS
+==================================================
+
+Section eyebrow:
+
+HOW IT WORKS
+
+Heading:
+
+A 31-Day Adaptive Interview Journey
+
+Subtitle:
+
+Personalized. Adaptive. Evidence-backed.
+
+Create four connected cards/steps:
+
+1. Curriculum-Aligned
+
+A structured 31-day AI engineering curriculum provides the context for each interview.
+
+2. Learning-Aware
+
+Candidate mission history identifies potential strengths, difficult topics, and areas worth validating.
+
+3. Adaptive Interview
+
+Every response is assessed live. The interviewer follows up, deepens, or changes topics based on demonstrated understanding.
+
+4. Evidence & Feedback
+
+Interview evidence is combined with the learning journey to produce grounded strengths, gaps, and actionable next steps.
+
+Use a subtle visual connector/arrow between steps on desktop.
+
+Stack cleanly on mobile.
+
+==================================================
+FEATURES SECTION
+==================================================
+
+Section id:
+
+features
+
+Heading:
+
+Built to interview the journey, not just the résumé.
+
+Create a clean feature grid.
+
+FEATURE 1
+Adaptive Questioning
+
+Questions evolve based on each candidate's response rather than following a fixed questionnaire.
+
+FEATURE 2
+Why This Question?
+
+Candidates and judges can see the structured signal behind each topic or follow-up without exposing hidden model reasoning.
+
+FEATURE 3
+Learning Signal Validation
+
+Historical learning difficulty is compared with current interview performance.
+
+Example idea:
+
+Historical:
+4 attempts
+
+Live interview:
+Strong
+
+Current signal:
+Improvement validated
+
+FEATURE 4
+Evidence-Linked Feedback
+
+Strengths and areas to improve can be traced back to actual interview evidence.
+
+FEATURE 5
+Dynamic Difficulty
+
+Strong answers lead to deeper architectural and production questions. Partial answers trigger focused follow-ups.
+
+FEATURE 6
+Reliable AI Fallback
+
+Primary Gemini → Flash-Lite fallback → deterministic fallback keeps the interview functional during temporary model limits.
+
+Keep descriptions concise.
+
+==================================================
+CURRICULUM SECTION
+==================================================
+
+Section id:
+
+curriculum
+
+Heading:
+
+31 days of AI engineering context
+
+Show the 8 curriculum modules in a clean compact timeline/grid:
+
+01
+Environment & Tooling
+Days 1–3
+
+02
+Data Foundations
+Days 4–6
+
+03
+Embeddings & Vector Search
+Days 7–10
+
+04
+LLM Core, Prompting & Fine-Tuning
+Days 11–15
+
+05
+Chatbot Build
+Days 16–20
+
+06
+Agentic AI & MCP
+Days 21–24
+
+07
+Evaluation, Security & Deployment
+Days 25–28
+
+08
+Production & Capstone
+Days 29–31
+
+Use the project's actual curriculum terminology/data.
+
+If possible, derive this from existing curriculum data or a small presentation mapping based directly on the supplied organizer curriculum.
+
+Do NOT fabricate curriculum topics.
+
+==================================================
+PRODUCT DIFFERENTIATOR SECTION
+==================================================
+
+Create a strong editorial section centered on:
+
+Learning history tells us where to look.
+The interview tells us what they know now.
+
+Below it show an example comparison:
+
+DAY 10
+Retrieval & Matching Engine
+
+Learning Journey
+Passed after 4 attempts
+
+↓
+
+Live Interview
+Strong understanding demonstrated
+
+↓
+
+Current Signal
+✓ Improvement Validated
+
+This should make the core product value obvious to judges.
+
+Use demo/example presentation only if it matches real supplied candidate patterns.
+
+Do not imply this is a real current user's private data.
+
+==================================================
+FOR CANDIDATES & ORGANIZERS
+==================================================
+
+Section id:
+
+organizers
+
+Heading:
+
+Designed for both sides of the interview.
+
+Two large cards.
+
+FOR CANDIDATES
+
+- Personalized to their actual learning journey
+- Follow-ups respond to what they say
+- Feedback explains strengths and gaps
+- Recommendations connect back to curriculum
+
+FOR ORGANIZERS
+
+- Consistent interview structure
+- Minimum curriculum coverage enforced by code
+- Evidence-backed candidate evaluation
+- Graceful model fallback
+- Session persistence
+- Structured feedback API
+
+Do not claim capabilities the product does not have.
+
+==================================================
+SAFE / PRIVATE / RELIABLE
+==================================================
+
+Create a restrained banner/card:
+
+Safe. Private. Reliable.
+
+Supporting copy:
+
+Server-side AI credentials, persistent interview sessions, validated structured model responses, bounded retries, and deterministic fallback keep the interview experience reliable.
+
+Use four small signals:
+
+Server-side secrets
+Validated AI output
+Persistent sessions
+Graceful fallback
+
+Do NOT claim:
+- HIPAA compliance
+- enterprise certification
+- end-to-end encryption
+- regulatory compliance
+unless actually implemented and documented.
+
+Do not write:
+
+"Your data is never shared"
+
+because Gemini receives interview content as part of inference.
+
+Keep security claims technically accurate.
+
+==================================================
+ABOUT SECTION
+==================================================
+
+Section id:
+
+about
+
+Keep very short.
+
+Possible copy:
+
+Built for ViCODATHON's Interview Agent challenge.
+
+A personalized technical interviewer that combines curriculum history with live answer assessment to create interviews that evolve with the candidate.
+
+Optionally mention:
+
+Powered by Gemini
+Session persistence with Supabase
+Deployed on Vercel
+
+Do not make sponsor/organizer endorsement claims.
+
+==================================================
+FINAL CTA
+==================================================
+
+Near the bottom:
+
+Ready to see the interview adapt?
+
+Start with a candidate learning profile and watch the questions evolve based on every answer.
+
+Button:
+
+Start an Interview →
+
+==================================================
+FOOTER
+==================================================
+
+Simple footer:
+
+Interview Agent
+
+Adaptive technical interviewing based on real learning signals.
+
+Optional small links:
+GitHub
+AI Usage Log
+
+Only include these if actual valid URLs can be supplied safely from existing project configuration or constants.
+
+Do not add fake Privacy Policy or Terms links.
+
+Copyright year should use the current year dynamically rather than hardcoding 2025.
+
+==================================================
+LIGHT / DARK THEME
+==================================================
+
+The landing page MUST support the existing light/dark theme system.
+
+Use existing theme tokens.
+
+Do not create a second theme implementation.
+
+Check:
+
+- hero
+- navbar
+- preview card
+- feature cards
+- curriculum
+- CTA
+- footer
+- all text
+- buttons
+- borders
+- icons
+
+in both themes.
+
+Avoid light-only hardcoded backgrounds.
+
+==================================================
+RESPONSIVE DESIGN
+==================================================
+
+Desktop:
+
+hero is a balanced 2-column layout.
+
+Tablet:
+
+reduce spacing and preview size gracefully.
+
+Mobile:
+
+stack hero text above product preview.
+
+Navigation becomes compact.
+
+Cards stack cleanly.
+
+No horizontal overflow.
+
+Maintain readable typography.
+
+==================================================
+MOTION / POLISH
+==================================================
+
+Use only subtle transitions.
+
+Allowed:
+
+- button hover
+- card hover
+- smooth anchor scrolling
+- very subtle hero preview entrance
+- minimal hover elevation
+
+Do not add:
+- particle effects
+- heavy animations
+- 3D effects
+- glowing neon backgrounds
+- autoplay animations
+- distracting motion
+
+==================================================
+IMPORTANT ACCURACY RULES
+==================================================
+
+Do NOT fabricate:
+
+- candidate scores
+- percentages
+- hiring recommendations
+- interview completion statistics
+- number of organizations
+- success rates
+- testimonials
+- customers
+- compliance certifications
+- user counts
+
+The concept image showed a 72% score.
+
+DO NOT implement that.
+
+This project deliberately avoids fake numeric candidate scoring.
+
+Use actual product capabilities instead.
+
+==================================================
+PRESERVE EXISTING APPLICATION
+==================================================
+
+Do NOT alter:
+
+- Gemini code
+- Gemini model fallback
+- Supabase
+- API endpoint
+- session state
+- adaptive logic
+- feedback logic
+- candidate data interpretation
+- organizer JSON
+- completion rules
+- Evidence & Adaptation behavior
+- theme persistence
+
+The landing page is a presentation/entry layer.
+
+==================================================
+TESTING
+==================================================
+
+Run:
+
+npm run test:interview
+npm run build
+
+Verify manually in source as practical:
+
+- landing → Start Interview → Candidate Selection
+- See How It Works anchor
+- navbar anchor links
+- theme toggle
+- theme persistence
+- desktop layout
+- mobile layout
+- returning from app to landing if implemented
+- existing interview flow unaffected
+
+Do not modify backend tests merely to satisfy UI changes.
+
+==================================================
+PROMPTS.md
+==================================================
+
+Append this ENTIRE prompt as:
+
+Prompt 13 — Interview Agent Landing Page
+Tool: Codex
+
+Purpose:
+Create a polished public-facing product landing page that communicates the Interview Agent's learning-aware adaptive interview value before entering the functional application.
+
+Include:
+- full prompt
+- implementation summary
+- files changed
+- tests
+- build result
+
+Do not overwrite previous prompt entries.
+
+Never include:
+- Gemini API keys
+- Supabase secrets
+- environment-variable values
+- credentials
+
+==================================================
+GIT
+==================================================
+
+Before committing:
+
+- confirm .env.local ignored
+- confirm no secrets staged
+- confirm organizer JSON unchanged
+- confirm backend/AI logic unchanged
+
+After tests/build pass:
+
+Commit with:
+
+Add Interview Agent landing page
+
+Push to origin/main.
+
+==================================================
+FINAL REPORT
+==================================================
+
+Report:
+
+- files changed
+- landing-page architecture
+- hero implementation
+- product preview
+- How It Works
+- features
+- curriculum section
+- learning-signal differentiator
+- candidate/organizer section
+- security/reliability messaging
+- theme behavior
+- responsive behavior
+- transition into existing Candidate Selection
+- whether any backend files changed
+- tests
+- build
+- commit hash
+- push status
+
+Do NOT deploy in this task.
+Do NOT add additional product features.
+
+Implementation summary:
+- Added a polished, responsive public landing page as a presentation layer before the existing Candidate Selection experience, using simple React state with no routing dependency.
+- Added the requested navigation, hero, four value signals, clearly labeled static live-interview preview, How It Works journey, six-feature grid, learning-signal differentiator, candidate/organizer cards, reliability messaging, About section, final CTA, and dynamic-year footer.
+- Rendered all eight curriculum modules and day ranges directly from the organizer-provided curriculum data.
+- Reused the existing light/dark theme hook, persistence, tokens, and accessible toggle in both desktop and mobile landing navigation.
+- Made the existing application brand mark an accessible Home control while leaving interview, Gemini, Supabase, API, evidence, feedback, and candidate interpretation logic unchanged.
+- Added smooth anchor scrolling and one restrained preview entrance with reduced-motion support.
+
+Files changed:
+- PROMPTS.md
+- index.html
+- src/App.tsx
+- src/components/Landing.tsx
+- src/components/ui.tsx
+- src/index.css
+
+Tests performed:
+- `npm run test:interview` — passed the existing Interview API, adaptive Gemini, evidence, fallback, and storage coverage without modifying tests.
+- `npm run build` — passed TypeScript checking and the Vite production build.
+- Static UI audit — confirmed all navigation anchors have real targets, the CTA enters the existing Candidate Selection flow, curriculum cards use supplied data, desktop/mobile breakpoint classes are present, the preview contains no API logic, and no fixed light-only component colors remain.
+- Live browser screenshots were unavailable because no browser surface was connected; no unrelated browser driver was substituted.
+
+No backend, AI, API, Supabase, organizer JSON, interview logic, dependency, or environment file was changed. No credential or environment-variable value was logged or committed.

@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import type { Candidate } from '../types';
 import { getCurriculumDay, getDayStatus } from '../data';
 
-type Theme = 'light' | 'dark';
+export type Theme = 'light' | 'dark';
 
 const THEME_STORAGE_KEY = 'interview-agent-theme';
 
@@ -21,11 +21,89 @@ export function AppShell({
   children,
   candidatesActive = false,
   onCandidates,
+  onHome,
 }: {
   children: ReactNode;
   candidatesActive?: boolean;
   onCandidates: () => void;
+  onHome: () => void;
 }) {
+  const { theme, toggleTheme } = useTheme();
+
+  return (
+    <div className="min-h-screen bg-ink-50">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[236px] flex-col border-r border-ink-200 bg-surface px-4 py-5 lg:flex">
+        <button
+          type="button"
+          onClick={onHome}
+          className="flex items-center gap-3 rounded-xl px-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2"
+          aria-label="Return to Interview Agent home"
+        >
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-action text-xs font-bold tracking-tight text-white">
+            IA
+          </div>
+          <div>
+            <p className="text-sm font-semibold tracking-tight text-ink-900">Interview Agent</p>
+            <p className="text-xs text-ink-400">Adaptive assessment</p>
+          </div>
+        </button>
+
+        <nav className="mt-10" aria-label="Primary navigation">
+          <button
+            type="button"
+            onClick={onCandidates}
+            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2 ${
+              candidatesActive
+                ? 'bg-accent-50 text-accent-700'
+                : 'text-ink-600 hover:bg-ink-50 hover:text-ink-900'
+            }`}
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+            </svg>
+            Candidates
+          </button>
+        </nav>
+
+        <div className="mt-auto space-y-3">
+          <ThemeToggle theme={theme} onToggle={toggleTheme} />
+          <div className="rounded-2xl border border-ink-100 bg-ink-50 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-400">AI cohort</p>
+            <p className="mt-2 text-sm font-medium text-ink-800">31-day journey</p>
+            <p className="mt-1 text-xs leading-5 text-ink-500">Learning history meets live technical evidence.</p>
+          </div>
+        </div>
+      </aside>
+
+      <div className="min-h-screen lg:pl-[236px]">
+        <div className="flex h-16 items-center justify-between border-b border-ink-200 bg-surface px-5 lg:hidden">
+          <button
+            type="button"
+            onClick={onHome}
+            className="flex items-center gap-2.5 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500"
+            aria-label="Return to Interview Agent home"
+          >
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-action text-[11px] font-bold text-white">IA</div>
+            <span className="text-sm font-semibold text-ink-900">Interview Agent</span>
+          </button>
+          <div className="flex items-center gap-1">
+            <ThemeToggle theme={theme} onToggle={toggleTheme} compact />
+            <button
+              type="button"
+              onClick={onCandidates}
+              className="rounded-lg px-3 py-2 text-sm font-medium text-ink-600 transition-colors hover:bg-ink-50 hover:text-ink-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500"
+            >
+              Candidates
+            </button>
+          </div>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+export function useTheme() {
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
 
   useEffect(() => {
@@ -61,70 +139,10 @@ export function AppShell({
     });
   };
 
-  return (
-    <div className="min-h-screen bg-ink-50">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[236px] flex-col border-r border-ink-200 bg-surface px-4 py-5 lg:flex">
-        <div className="flex items-center gap-3 px-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-action text-xs font-bold tracking-tight text-white">
-            IA
-          </div>
-          <div>
-            <p className="text-sm font-semibold tracking-tight text-ink-900">Interview Agent</p>
-            <p className="text-xs text-ink-400">Adaptive assessment</p>
-          </div>
-        </div>
-
-        <nav className="mt-10" aria-label="Primary navigation">
-          <button
-            type="button"
-            onClick={onCandidates}
-            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2 ${
-              candidatesActive
-                ? 'bg-accent-50 text-accent-700'
-                : 'text-ink-600 hover:bg-ink-50 hover:text-ink-900'
-            }`}
-          >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
-            </svg>
-            Candidates
-          </button>
-        </nav>
-
-        <div className="mt-auto space-y-3">
-          <ThemeToggle theme={theme} onToggle={toggleTheme} />
-          <div className="rounded-2xl border border-ink-100 bg-ink-50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-400">AI cohort</p>
-            <p className="mt-2 text-sm font-medium text-ink-800">31-day journey</p>
-            <p className="mt-1 text-xs leading-5 text-ink-500">Learning history meets live technical evidence.</p>
-          </div>
-        </div>
-      </aside>
-
-      <div className="min-h-screen lg:pl-[236px]">
-        <div className="flex h-16 items-center justify-between border-b border-ink-200 bg-surface px-5 lg:hidden">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-action text-[11px] font-bold text-white">IA</div>
-            <span className="text-sm font-semibold text-ink-900">Interview Agent</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <ThemeToggle theme={theme} onToggle={toggleTheme} compact />
-            <button
-              type="button"
-              onClick={onCandidates}
-              className="rounded-lg px-3 py-2 text-sm font-medium text-ink-600 transition-colors hover:bg-ink-50 hover:text-ink-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500"
-            >
-              Candidates
-            </button>
-          </div>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
+  return { theme, toggleTheme };
 }
 
-function ThemeToggle({ theme, onToggle, compact = false }: { theme: Theme; onToggle: () => void; compact?: boolean }) {
+export function ThemeToggle({ theme, onToggle, compact = false }: { theme: Theme; onToggle: () => void; compact?: boolean }) {
   const switchingTo = theme === 'dark' ? 'light' : 'dark';
   return (
     <button

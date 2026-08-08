@@ -91,6 +91,7 @@ html[data-theme='dark'] {
 html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
 }
 
 body {
@@ -124,4 +125,29 @@ textarea {
     transparent 2px,
     transparent 4px
   );
+}
+
+@keyframes landing-preview-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.landing-preview-enter {
+  animation: landing-preview-enter 500ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .landing-preview-enter {
+    animation: none;
+  }
 }

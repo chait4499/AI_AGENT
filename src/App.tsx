@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { useInterviewFlow } from './useInterviewFlow';
+import { Landing } from './components/Landing';
 import { Selection } from './components/Selection';
 import { Brief } from './components/Brief';
 import { Interview } from './components/Interview';
@@ -7,7 +9,12 @@ import { AppShell } from './components/ui';
 
 export default function App() {
   const flow = useInterviewFlow();
+  const [showLanding, setShowLanding] = useState(true);
   let content;
+
+  if (showLanding) {
+    return <Landing onStart={() => setShowLanding(false)} />;
+  }
 
   if (flow.view === 'selection') {
     content = <Selection onSelect={flow.selectCandidate} />;
@@ -46,7 +53,14 @@ export default function App() {
   }
 
   return (
-    <AppShell candidatesActive={flow.view === 'selection'} onCandidates={flow.reset}>
+    <AppShell
+      candidatesActive={flow.view === 'selection'}
+      onCandidates={flow.reset}
+      onHome={() => {
+        flow.reset();
+        setShowLanding(true);
+      }}
+    >
       {content}
     </AppShell>
   );
