@@ -2,6 +2,92 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  color-scheme: light;
+  --color-surface: 255 255 255;
+  --color-action: 79 70 229;
+  --color-action-hover: 67 56 202;
+  --color-ink-50: 247 247 248;
+  --color-ink-100: 238 238 240;
+  --color-ink-200: 220 220 224;
+  --color-ink-300: 194 194 200;
+  --color-ink-400: 117 117 126;
+  --color-ink-500: 100 100 110;
+  --color-ink-600: 82 82 91;
+  --color-ink-700: 63 63 70;
+  --color-ink-800: 39 39 42;
+  --color-ink-900: 24 24 27;
+  --color-accent-50: 238 242 255;
+  --color-accent-100: 224 231 255;
+  --color-accent-200: 199 210 254;
+  --color-accent-300: 165 180 252;
+  --color-accent-400: 129 140 248;
+  --color-accent-500: 99 102 241;
+  --color-accent-600: 79 70 229;
+  --color-accent-700: 67 56 202;
+  --color-accent-800: 55 48 163;
+  --color-accent-900: 49 46 129;
+  --color-emerald-50: 236 253 245;
+  --color-emerald-500: 16 185 129;
+  --color-emerald-600: 5 150 105;
+  --color-emerald-700: 4 120 87;
+  --color-amber-50: 255 251 235;
+  --color-amber-400: 251 191 36;
+  --color-amber-500: 245 158 11;
+  --color-amber-700: 180 83 9;
+  --color-red-50: 254 242 242;
+  --color-red-100: 254 226 226;
+  --color-red-500: 239 68 68;
+  --color-red-600: 220 38 38;
+  --color-red-700: 185 28 28;
+  --journey-skipped: 161 161 170;
+  --shadow-soft: 0 1px 2px 0 rgb(0 0 0 / 0.04), 0 1px 3px 0 rgb(0 0 0 / 0.06);
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+}
+
+html[data-theme='dark'] {
+  color-scheme: dark;
+  --color-surface: 27 27 33;
+  --color-action: 81 70 199;
+  --color-action-hover: 93 82 214;
+  --color-ink-50: 17 17 22;
+  --color-ink-100: 35 35 43;
+  --color-ink-200: 60 60 72;
+  --color-ink-300: 81 81 94;
+  --color-ink-400: 154 154 167;
+  --color-ink-500: 177 177 187;
+  --color-ink-600: 197 197 206;
+  --color-ink-700: 216 216 223;
+  --color-ink-800: 236 236 240;
+  --color-ink-900: 247 247 248;
+  --color-accent-50: 40 34 61;
+  --color-accent-100: 52 43 78;
+  --color-accent-200: 73 61 107;
+  --color-accent-300: 103 90 145;
+  --color-accent-400: 138 124 224;
+  --color-accent-500: 151 137 245;
+  --color-accent-600: 166 153 247;
+  --color-accent-700: 184 174 250;
+  --color-accent-800: 202 195 252;
+  --color-accent-900: 224 220 254;
+  --color-emerald-50: 15 42 33;
+  --color-emerald-500: 52 211 153;
+  --color-emerald-600: 110 231 183;
+  --color-emerald-700: 167 243 208;
+  --color-amber-50: 49 38 15;
+  --color-amber-400: 251 191 36;
+  --color-amber-500: 252 211 77;
+  --color-amber-700: 253 230 138;
+  --color-red-50: 52 24 29;
+  --color-red-100: 72 31 39;
+  --color-red-500: 248 113 113;
+  --color-red-600: 252 165 165;
+  --color-red-700: 254 202 202;
+  --journey-skipped: 113 113 122;
+  --shadow-soft: 0 1px 2px 0 rgb(0 0 0 / 0.28), 0 4px 12px 0 rgb(0 0 0 / 0.18);
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.32), 0 1px 2px -1px rgb(0 0 0 / 0.24);
+}
+
 html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -10,9 +96,13 @@ html {
 body {
   margin: 0;
   min-width: 320px;
-  background-color: #f7f7f8;
-  color: #18181b;
+  background-color: rgb(var(--color-ink-50));
+  color: rgb(var(--color-ink-900));
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+* {
+  --tw-ring-offset-color: rgb(var(--color-ink-50));
 }
 
 textarea {
@@ -26,11 +116,11 @@ textarea {
 }
 
 .journey-cell-skipped {
-  background-color: #a1a1aa;
+  background-color: rgb(var(--journey-skipped));
   background-image: repeating-linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.75) 0,
-    rgba(255, 255, 255, 0.75) 2px,
+    rgb(var(--color-surface) / 0.72) 0,
+    rgb(var(--color-surface) / 0.72) 2px,
     transparent 2px,
     transparent 4px
   );

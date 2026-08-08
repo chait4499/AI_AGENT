@@ -39,7 +39,7 @@ export function Interview({
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="border-b border-ink-200 bg-white">
+      <header className="border-b border-ink-200 bg-surface">
         <div className="mx-auto flex w-full max-w-[1300px] items-center justify-between px-5 py-4 sm:px-8 xl:px-10">
           <div className="flex items-center gap-4">
             <button onClick={onExit} className="rounded-lg px-2 py-2 text-sm font-medium text-ink-500 transition-colors hover:bg-ink-50 hover:text-ink-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500">
@@ -107,7 +107,7 @@ export function Interview({
                   placeholder="Explain your approach, key decisions, and trade-offs…"
                   rows={7}
                   disabled={loading}
-                  className="mt-3 w-full rounded-xl border border-ink-200 bg-white px-4 py-4 text-[15px] leading-6 text-ink-900 shadow-sm outline-none transition placeholder:text-ink-400 focus:border-accent-400 focus:ring-4 focus:ring-accent-100 disabled:cursor-wait disabled:bg-ink-50"
+                  className="mt-3 w-full rounded-xl border border-ink-200 bg-surface px-4 py-4 text-[15px] leading-6 text-ink-900 shadow-sm outline-none transition placeholder:text-ink-400 focus:border-accent-400 focus:ring-4 focus:ring-accent-100 disabled:cursor-wait disabled:bg-ink-50"
                 />
                 {error && <p className="mt-2 text-sm text-red-600" role="alert">{error}</p>}
                 <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -137,7 +137,7 @@ export function Interview({
       </div>
 
       {/* Mobile transcript toggle */}
-      <div className="border-t border-ink-200 bg-white lg:hidden">
+      <div className="border-t border-ink-200 bg-surface lg:hidden">
         <button
           onClick={() => setShowTranscript(!showTranscript)}
           className="w-full px-5 py-4 text-left text-sm font-medium text-ink-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-500"

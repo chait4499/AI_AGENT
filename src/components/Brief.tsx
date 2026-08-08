@@ -20,7 +20,7 @@ export function Brief({
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-ink-200 bg-white">
+      <header className="border-b border-ink-200 bg-surface">
         <div className="mx-auto flex max-w-[1250px] items-center justify-between px-5 py-4 sm:px-8 xl:px-10">
           <button onClick={onBack} className="rounded-lg px-2 py-2 text-sm font-medium text-ink-500 transition-colors hover:bg-ink-50 hover:text-ink-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500">
             ← Candidates

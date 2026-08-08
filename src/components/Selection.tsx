@@ -18,7 +18,7 @@ export function Selection({ onSelect }: { onSelect: (c: Candidate) => void }) {
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-ink-200 bg-white">
+      <header className="border-b border-ink-200 bg-surface">
         <div className="mx-auto max-w-[1350px] px-5 py-10 sm:px-8 sm:py-14 xl:px-10">
           <p className="text-sm font-semibold text-accent-600">AI Engineering Cohort</p>
           <h1 className="mt-3 text-3xl font-semibold tracking-[-0.03em] text-ink-900 sm:text-4xl">Choose a candidate</h1>
@@ -45,7 +45,7 @@ export function Selection({ onSelect }: { onSelect: (c: Candidate) => void }) {
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search by name or role…"
               aria-label="Search candidates by name or role"
-              className="w-full rounded-xl border border-ink-200 bg-white py-3 pl-10 pr-4 text-sm text-ink-900 shadow-sm outline-none transition placeholder:text-ink-400 focus:border-accent-400 focus:ring-4 focus:ring-accent-100"
+              className="w-full rounded-xl border border-ink-200 bg-surface py-3 pl-10 pr-4 text-sm text-ink-900 shadow-sm outline-none transition placeholder:text-ink-400 focus:border-accent-400 focus:ring-4 focus:ring-accent-100"
             />
           </div>
         </div>
@@ -57,7 +57,7 @@ export function Selection({ onSelect }: { onSelect: (c: Candidate) => void }) {
         </div>
 
         {filtered.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-ink-200 bg-white py-16 text-center text-sm text-ink-500">
+          <div className="rounded-2xl border border-dashed border-ink-200 bg-surface py-16 text-center text-sm text-ink-500">
             No candidates match your search.
           </div>
         )}
@@ -72,7 +72,7 @@ function CandidateCard({ candidate, onSelect }: { candidate: Candidate; onSelect
     <button
       type="button"
       onClick={() => onSelect(candidate)}
-      className="group flex min-h-[248px] w-full flex-col rounded-2xl border border-ink-200 bg-white p-5 text-left shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:border-accent-300 hover:shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2 sm:p-6"
+      className="group flex min-h-[248px] w-full flex-col rounded-2xl border border-ink-200 bg-surface p-5 text-left shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:border-accent-300 hover:shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2 sm:p-6"
     >
       <div className="flex w-full items-start gap-4">
         <Avatar initials={getInitials(m.name)} name={m.name} size="lg" />

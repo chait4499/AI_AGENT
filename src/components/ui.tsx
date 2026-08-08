@@ -1,6 +1,21 @@
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type { Candidate } from '../types';
 import { getCurriculumDay, getDayStatus } from '../data';
+
+type Theme = 'light' | 'dark';
+
+const THEME_STORAGE_KEY = 'interview-agent-theme';
+
+function getInitialTheme(): Theme {
+  const documentTheme = document.documentElement.dataset.theme;
+  if (documentTheme === 'light' || documentTheme === 'dark') return documentTheme;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function applyTheme(theme: Theme) {
+  document.documentElement.dataset.theme = theme;
+  document.documentElement.style.colorScheme = theme;
+}
 
 export function AppShell({
   children,
@@ -11,11 +26,46 @@ export function AppShell({
   candidatesActive?: boolean;
   onCandidates: () => void;
 }) {
+  const [theme, setTheme] = useState<Theme>(getInitialTheme);
+
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
+
+  useEffect(() => {
+    const systemPreference = window.matchMedia('(prefers-color-scheme: dark)');
+    const followSystemPreference = (event: MediaQueryListEvent) => {
+      try {
+        const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+        if (savedTheme === 'light' || savedTheme === 'dark') return;
+      } catch {
+        // Continue following the system preference when storage is unavailable.
+      }
+      setTheme(event.matches ? 'dark' : 'light');
+    };
+
+    systemPreference.addEventListener('change', followSystemPreference);
+    return () => systemPreference.removeEventListener('change', followSystemPreference);
+  }, []);
+
+  const toggleTheme = () => {
+    setTheme((currentTheme) => {
+      const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      applyTheme(nextTheme);
+      try {
+        localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+      } catch {
+        // The selected theme still applies for this visit if storage is unavailable.
+      }
+      return nextTheme;
+    });
+  };
+
   return (
     <div className="min-h-screen bg-ink-50">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[236px] flex-col border-r border-ink-200 bg-white px-4 py-5 lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[236px] flex-col border-r border-ink-200 bg-surface px-4 py-5 lg:flex">
         <div className="flex items-center gap-3 px-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent-600 text-xs font-bold tracking-tight text-white">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-action text-xs font-bold tracking-tight text-white">
             IA
           </div>
           <div>
@@ -41,26 +91,32 @@ export function AppShell({
           </button>
         </nav>
 
-        <div className="mt-auto rounded-2xl border border-ink-100 bg-ink-50 p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-400">AI cohort</p>
-          <p className="mt-2 text-sm font-medium text-ink-800">31-day journey</p>
-          <p className="mt-1 text-xs leading-5 text-ink-500">Learning history meets live technical evidence.</p>
+        <div className="mt-auto space-y-3">
+          <ThemeToggle theme={theme} onToggle={toggleTheme} />
+          <div className="rounded-2xl border border-ink-100 bg-ink-50 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-400">AI cohort</p>
+            <p className="mt-2 text-sm font-medium text-ink-800">31-day journey</p>
+            <p className="mt-1 text-xs leading-5 text-ink-500">Learning history meets live technical evidence.</p>
+          </div>
         </div>
       </aside>
 
       <div className="min-h-screen lg:pl-[236px]">
-        <div className="flex h-16 items-center justify-between border-b border-ink-200 bg-white px-5 lg:hidden">
+        <div className="flex h-16 items-center justify-between border-b border-ink-200 bg-surface px-5 lg:hidden">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-600 text-[11px] font-bold text-white">IA</div>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-action text-[11px] font-bold text-white">IA</div>
             <span className="text-sm font-semibold text-ink-900">Interview Agent</span>
           </div>
-          <button
-            type="button"
-            onClick={onCandidates}
-            className="rounded-lg px-3 py-2 text-sm font-medium text-ink-600 transition-colors hover:bg-ink-50 hover:text-ink-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500"
-          >
-            Candidates
-          </button>
+          <div className="flex items-center gap-1">
+            <ThemeToggle theme={theme} onToggle={toggleTheme} compact />
+            <button
+              type="button"
+              onClick={onCandidates}
+              className="rounded-lg px-3 py-2 text-sm font-medium text-ink-600 transition-colors hover:bg-ink-50 hover:text-ink-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500"
+            >
+              Candidates
+            </button>
+          </div>
         </div>
         {children}
       </div>
@@ -68,9 +124,42 @@ export function AppShell({
   );
 }
 
+function ThemeToggle({ theme, onToggle, compact = false }: { theme: Theme; onToggle: () => void; compact?: boolean }) {
+  const switchingTo = theme === 'dark' ? 'light' : 'dark';
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={`${compact ? 'h-10 w-10 justify-center' : 'w-full gap-3 px-3 py-2.5'} inline-flex items-center rounded-xl text-sm font-medium text-ink-600 transition-colors hover:bg-ink-50 hover:text-ink-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2`}
+      aria-label={`Switch to ${switchingTo} mode`}
+      title={`Switch to ${switchingTo} mode`}
+    >
+      {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
+      {!compact && <span>{switchingTo === 'dark' ? 'Dark mode' : 'Light mode'}</span>}
+    </button>
+  );
+}
+
+function SunIcon() {
+  return (
+    <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+      <circle cx="12" cy="12" r="3.5" />
+      <path strokeLinecap="round" d="M12 2.5v2M12 19.5v2M4.5 12h-2M21.5 12h-2M5.28 5.28l1.42 1.42M17.3 17.3l1.42 1.42M18.72 5.28L17.3 6.7M6.7 17.3l-1.42 1.42" />
+    </svg>
+  );
+}
+
+function MoonIcon() {
+  return (
+    <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 15.1A8.5 8.5 0 018.9 3.75a8.5 8.5 0 1011.35 11.35z" />
+    </svg>
+  );
+}
+
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
-    <div className={`rounded-2xl border border-ink-200 bg-white shadow-card ${className}`}>
+    <div className={`rounded-2xl border border-ink-200 bg-surface shadow-card ${className}`}>
       {children}
     </div>
   );
@@ -93,8 +182,8 @@ export function Button({
 }) {
   const base = 'inline-flex items-center justify-center gap-2 rounded-xl font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
   const variants = {
-    primary: 'bg-accent-600 text-white shadow-sm hover:-translate-y-0.5 hover:bg-accent-700 hover:shadow-md',
-    secondary: 'border border-ink-200 bg-white text-ink-700 hover:border-ink-300 hover:bg-ink-50',
+    primary: 'bg-action text-white shadow-sm hover:-translate-y-0.5 hover:bg-action-hover hover:shadow-md',
+    secondary: 'border border-ink-200 bg-surface text-ink-700 hover:border-ink-300 hover:bg-ink-50',
     ghost: 'text-ink-600 hover:bg-ink-100',
   };
   const sizes = {

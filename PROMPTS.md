@@ -2944,3 +2944,370 @@ Tests performed:
 - A sanitized real-session smoke test returned validated feedback through the completed fallback chain in approximately 13 seconds.
 
 No API keys, secret values, prompts, candidate answers, authorization headers, or environment-variable values were logged or committed.
+
+## Prompt 12 — Light and Dark Theme Support
+
+Tool: Codex
+
+Purpose:
+Add accessible persistent light/dark themes to the approved Interview Agent interface without modifying product intelligence.
+
+Full prompt:
+
+PROMPT 12 — Light and Dark Theme Support
+
+This is the final UI polish task before production deployment.
+
+The Interview Agent is feature-complete and the current light interface is approved.
+
+GOAL:
+Add a polished Light / Dark theme system without changing any product behavior, backend logic, interview intelligence, API behavior, or data.
+
+Do NOT redesign the application again.
+
+==================================================
+1. THEME BEHAVIOR
+==================================================
+
+Support two user-facing themes:
+
+- Light
+- Dark
+
+Keep the existing Prompt 08/09 visual identity.
+
+Light mode should remain very close to the current approved design.
+
+Dark mode should feel like the same product, not a separate redesign.
+
+On first visit:
+- use the browser/system `prefers-color-scheme` preference if no saved preference exists
+
+After the user explicitly chooses a theme:
+- persist that choice locally
+- restore it on future visits
+
+Use localStorage or the simplest existing browser mechanism.
+
+Do not require authentication or backend persistence.
+
+==================================================
+2. THEME CONTROL
+==================================================
+
+Add one compact theme toggle.
+
+Desktop:
+place it unobtrusively near the bottom of the existing left sidebar.
+
+Mobile:
+place it in the existing mobile header/navigation area.
+
+Keep it visually minimal.
+
+Examples:
+Sun icon / Moon icon
+or
+Light / Dark segmented control
+
+Do not create a Settings page just for this.
+
+Use accessible labels such as:
+"Switch to dark mode"
+"Switch to light mode"
+
+Keyboard interaction must work.
+
+==================================================
+3. IMPLEMENTATION
+==================================================
+
+Prefer CSS custom properties/design tokens.
+
+For example:
+
+--bg
+--surface
+--surface-subtle
+--text-primary
+--text-secondary
+--border
+--accent
+--accent-hover
+--positive
+--warning
+--danger
+--input-bg
+--focus-ring
+
+Apply the theme using a simple root attribute/class such as:
+
+html[data-theme="dark"]
+
+or equivalent.
+
+Do not add a theme library or unnecessary dependency.
+
+Audit the current UI for hardcoded colors that prevent dark mode from rendering correctly.
+
+Only refactor color declarations needed for theme support.
+
+==================================================
+4. LIGHT THEME
+==================================================
+
+Preserve the approved visual direction:
+
+- warm/light neutral background
+- white cards
+- near-black typography
+- restrained violet accent
+- subtle gray borders
+- green positive signals
+- amber probe signals
+- red failure signals
+
+Do not materially change spacing, layout, component sizes, or typography.
+
+==================================================
+5. DARK THEME
+==================================================
+
+Create a professional dark theme.
+
+Avoid pure black everywhere.
+
+Conceptual direction:
+
+Background:
+deep neutral charcoal
+
+Primary surface:
+slightly lighter charcoal
+
+Secondary surface:
+subtle elevated neutral
+
+Primary text:
+soft white / very light gray
+
+Secondary text:
+muted gray with good contrast
+
+Borders:
+subtle but visible dark-neutral borders
+
+Accent:
+retain the violet identity, tuned for dark-background contrast
+
+Positive / warning / failure states:
+remain distinguishable and accessible.
+
+Candidate journey strips must remain readable in dark mode.
+
+Ensure the following all work correctly:
+
+- candidate cards
+- sidebar
+- search field
+- candidate brief
+- metrics
+- 31-day journey visualization
+- Validate / Probe / Skipped cards
+- interviewer brief
+- live interview question panel
+- textarea
+- interview path
+- Why this question disclosure
+- transcript
+- loading state
+- feedback report
+- Strengths / Areas to Strengthen
+- Learning Signal Validation
+- View Evidence disclosures
+- buttons
+- focus states
+
+==================================================
+6. CONTRAST / ACCESSIBILITY
+==================================================
+
+Maintain good text contrast in both modes.
+
+Do not rely only on color to communicate:
+
+- passed
+- multiple attempts
+- failed
+- skipped
+- Probe
+- Validate
+- Strength Confirmed
+- Improvement Validated
+- Needs Reinforcement
+
+Existing labels/icons should remain meaningful.
+
+Inputs and textareas need visible:
+- border
+- placeholder
+- text
+- focus ring
+
+Hover/focus states must work in both themes.
+
+==================================================
+7. PREVENT THEME FLASH
+==================================================
+
+Avoid an obvious white flash when a saved dark theme is loaded.
+
+Use the simplest reliable approach compatible with the current Vite/React project.
+
+Do not create complicated theme infrastructure.
+
+==================================================
+8. PRESERVE ALL PRODUCT LOGIC
+==================================================
+
+Do NOT modify:
+
+- Gemini integration
+- primary/fallback Gemini models
+- Gemini retry behavior
+- Supabase session persistence
+- /api/interview contract
+- adaptive follow-ups
+- question targeting
+- interview completion requirements
+- observations
+- feedback generation
+- evidence/adaptation logic
+- candidate mission interpretation
+- organizer JSON
+- session state schema unless absolutely unnecessary
+
+This is UI/theme only.
+
+==================================================
+9. RESPONSIVENESS
+==================================================
+
+Verify theme control and both themes across:
+
+- wide desktop
+- laptop
+- tablet/narrow layout
+- mobile layout
+
+Do not break the current 3/2/1 candidate-card responsive grid.
+
+==================================================
+10. TESTING
+==================================================
+
+Run:
+
+npm run test:interview
+npm run build
+
+Also inspect for:
+- TypeScript errors
+- hardcoded light-only colors
+- unreadable dark-mode states
+- accidental backend changes
+
+Do not modify interview tests simply to suppress failures.
+
+==================================================
+11. PROMPTS.md
+==================================================
+
+Append this ENTIRE prompt to PROMPTS.md as:
+
+Prompt 12 — Light and Dark Theme Support
+Tool: Codex
+
+Purpose:
+Add accessible persistent light/dark themes to the approved Interview Agent interface without modifying product intelligence.
+
+Include:
+- full prompt
+- implementation summary
+- files changed
+- test result
+- build result
+
+Never overwrite prior prompt entries.
+
+Never include:
+- GEMINI_API_KEY
+- SUPABASE_SECRET_KEY
+- API keys
+- environment-variable values
+
+==================================================
+12. GIT
+==================================================
+
+Before committing:
+
+- verify .env.local remains ignored
+- verify no secrets are staged
+- verify backend/interview logic has not changed unintentionally
+- verify organizer data is unchanged
+
+After tests/build pass:
+
+Commit with:
+
+Add light and dark themes
+
+Push to origin/main.
+
+==================================================
+FINAL REPORT
+==================================================
+
+Report:
+
+- files changed
+- theme implementation approach
+- default/system preference behavior
+- persistence behavior
+- dark-theme visual changes
+- theme-toggle location
+- accessibility considerations
+- whether any backend/AI files changed
+- tests
+- build
+- commit hash
+- push status
+
+Do not deploy in this task.
+Do not add any other features.
+
+Implementation summary:
+- Added light and dark design-token palettes using CSS custom properties selected by `html[data-theme='dark']`, while preserving existing component structure, spacing, typography, and responsive grids.
+- Added an accessible native-button theme control at the bottom of the desktop sidebar and in the mobile header. The control uses sun/moon icons, keyboard interaction, and an action-specific accessible label.
+- First visits follow `prefers-color-scheme`; explicit choices are saved locally and restored. A small pre-render script applies the resolved theme before the app and stylesheet load to prevent a saved dark theme from flashing light.
+- Converted fixed white UI surfaces and status colors to theme-aware tokens, added dark-appropriate neutral/violet/status palettes and shadows, and kept journey status labels and skipped-pattern differentiation intact.
+- No backend, Gemini, Supabase, interview intelligence, session schema, organizer data, or dependency changes were made.
+
+Files changed:
+- index.html
+- src/components/Brief.tsx
+- src/components/Feedback.tsx
+- src/components/Interview.tsx
+- src/components/Selection.tsx
+- src/components/ui.tsx
+- src/index.css
+- tailwind.config.js
+- PROMPTS.md
+
+Tests performed:
+- `npm run test:interview` — passed the existing Interview API, adaptive Gemini, evidence, fallback, and storage coverage without modifying tests.
+- `npm run build` — passed TypeScript checking and the Vite production build.
+- Static theme audit — confirmed theme-aware compiled surface/action classes, preserved 3/2/1 candidate-card responsive classes, no fixed light-only UI colors, and no backend or organizer-data diff.
+
+No API keys, secret values, prompts, candidate answers, authorization headers, or environment-variable values were logged or committed.
