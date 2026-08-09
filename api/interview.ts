@@ -1,3 +1,5 @@
+// final check of interview.ts file
+
 import type { ApiRequest, Candidate } from '../src/types.js';
 import { continueSession, initializeSession } from '../server/interviewEngine.js';
 import { getGeminiClient } from '../server/gemini.js';

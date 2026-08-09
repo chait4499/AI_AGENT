@@ -1,3 +1,5 @@
+// final check of gemini.ts 
+
 import curriculumData from '../data/raw/curriculum.json' with { type: 'json' };
 import type { Curriculum, Feedback } from '../src/types.js';
 import type { AdaptiveInterviewAI, AdaptiveTurn, SessionState } from './interviewEngine.js';
