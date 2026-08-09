@@ -1,3 +1,5 @@
+// Interview Engine
+
 import curriculumData from '../data/raw/curriculum.json' with { type: 'json' };
 import type { ApiResponse, AssessmentEvidence, Candidate, Curriculum, CurriculumDay, Difficulty, Feedback, Turn } from '../src/types.js';
 
