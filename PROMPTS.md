@@ -5296,3 +5296,1029 @@ Validation:
 - `npm run test:interview` — passed.
 - `npm run build` — passed.
 - Secret-shaped-value scan — passed; no credential or environment-variable value was added.
+
+# Prompt 16 — Final GitHub README and AI Usage Evidence
+
+Tool: Codex
+
+Purpose:
+Create a polished submission-ready GitHub README and detailed AI Usage Evidence documentation without modifying application behavior.
+
+Full prompt:
+
+PROMPT 16 — Final GitHub README and AI Usage Evidence
+
+We are preparing the Interview Agent repository for final ViCODATHON submission.
+
+The application is already built and deployed.
+
+This task is DOCUMENTATION / REPOSITORY PRESENTATION ONLY.
+
+Do NOT modify:
+- application behavior
+- frontend functionality
+- backend
+- Gemini integration
+- Supabase
+- API contract
+- session logic
+- organizer data
+- dependencies
+- deployment configuration
+
+GOAL
+
+Make the public GitHub repository look polished, credible and easy for hackathon judges to understand.
+
+Update the root README.md and add a dedicated AI_USAGE_EVIDENCE.md.
+
+The GitHub page should immediately communicate:
+
+1. what Interview Agent is
+2. why it is different
+3. how it works
+4. key features
+5. technical architecture
+6. how to run it
+7. live demo
+8. AI usage transparency
+9. hackathon submission evidence
+
+==================================================
+PROJECT LINKS
+==================================================
+
+Use these verified links:
+
+Live Demo:
+https://ai-agent-blond-one.vercel.app
+
+GitHub Repository:
+https://github.com/chait4499/AI_AGENT
+
+AI Usage Log:
+https://github.com/chait4499/AI_AGENT/blob/main/PROMPTS.md
+
+Do not invent additional URLs.
+
+Do not add fake social links.
+
+==================================================
+README — TOP HERO
+==================================================
+
+Create a strong GitHub README header.
+
+Suggested structure:
+
+# Interview Agent
+
+**Adaptive Interviews. Real Learning. Proven Growth.**
+
+A personalized AI technical interviewer built for ViCODATHON that combines a candidate's 31-day AI engineering learning journey with live adaptive questioning and evidence-backed feedback.
+
+Add compact badges where useful.
+
+Prefer tasteful badges such as:
+
+- React
+- TypeScript
+- Gemini
+- Supabase
+- Vercel
+- ViCODATHON
+
+Avoid badge clutter.
+
+Do not claim official organizer endorsement.
+
+Add clear primary links near the top:
+
+[Live Demo]
+[AI Usage Log]
+[Repository]
+
+Use standard GitHub Markdown links.
+
+==================================================
+CORE PRODUCT THESIS
+==================================================
+
+Prominently include:
+
+> Learning history tells us where to look.
+> The interview tells us what they know now.
+
+Explain briefly that this is not a generic fixed-question AI interview chatbot.
+
+The Interview Agent:
+- analyzes historical learning signals
+- chooses relevant curriculum areas
+- evaluates live responses
+- follows up on incomplete understanding
+- deepens when answers are strong
+- moves across curriculum topics
+- creates evidence-grounded feedback
+
+==================================================
+WHY THIS PROJECT EXISTS
+==================================================
+
+Add a short section:
+
+## The Challenge
+
+Explain that this project was built for the ViCODATHON Interview Agent challenge.
+
+Summarize the challenge without over-quoting organizer text:
+
+Build an AI interviewer that:
+- uses the candidate's 31-day AI learning journey
+- conducts a realistic multi-turn technical interview
+- adapts based on responses
+- maintains context
+- covers multiple curriculum areas
+- produces structured actionable feedback
+
+Do not imply we represent ViCODATHON or ABTalks.
+
+==================================================
+FEATURES
+==================================================
+
+Create a polished:
+
+## Key Features
+
+Include:
+
+### Learning-Aware Personalization
+
+Historical candidate mission data identifies:
+- first-try strengths
+- high-attempt topics
+- failed areas
+- explicit skips
+
+Unlisted days are not treated as failures.
+
+### Adaptive Interviewing
+
+Gemini assesses each answer as:
+
+- weak
+- partial
+- good
+- strong
+
+The next turn can:
+- follow up
+- deepen
+- move to another topic
+- eventually finish
+
+### Dynamic Difficulty
+
+Junior candidates receive progressively appropriate questions.
+
+More experienced candidates can receive:
+- architecture questions
+- trade-offs
+- reliability
+- scalability
+- production scenarios
+
+### Why This Question?
+
+The UI explains structured reasons for question selection without exposing hidden chain-of-thought.
+
+Examples:
+- validating historical strength
+- probing a difficult topic
+- following up on a missing concept
+- deepening after a strong answer
+
+### Interview Path
+
+The interview visibly shows transitions such as:
+- VALIDATE
+- PROBE
+- FOLLOW-UP
+- DEEPEN
+- NEW TOPIC
+
+### Learning Signal Validation
+
+Compare historical learning journey against current interview performance.
+
+Examples:
+
+Historical difficulty + current strong
+→ Improvement Validated
+
+Historical strength + current strong
+→ Strength Confirmed
+
+Current weak/partial
+→ Needs Reinforcement
+
+### Evidence-Linked Feedback
+
+Strengths and gaps can be connected back to actual interview evidence where reliable.
+
+### Reliable AI Fallback
+
+Document the reliability chain accurately:
+
+Gemini primary model
+→ bounded retry
+→ Gemini Flash-Lite fallback
+→ deterministic curriculum fallback
+
+Do not claim the fallback model is always invoked.
+
+==================================================
+INTERVIEW REQUIREMENTS
+==================================================
+
+Add:
+
+## Interview Rules
+
+Explain that server-side code enforces:
+
+- minimum 8 substantive questions
+- minimum 4 unique curriculum days
+- curriculum-grounded questions
+- bounded repeated follow-ups
+- structured final feedback
+
+Gemini cannot bypass these server rules.
+
+==================================================
+31-DAY CURRICULUM
+==================================================
+
+Add:
+
+## Curriculum Coverage
+
+Use the real curriculum structure from organizer data:
+
+1. Environment & Tooling — Days 1–3
+2. Data Foundations — Days 4–6
+3. Embeddings & Vector Search — Days 7–10
+4. LLM Core, Prompting & Fine-Tuning — Days 11–15
+5. Chatbot Build — Days 16–20
+6. Agentic AI & MCP — Days 21–24
+7. Evaluation, Security & Deployment — Days 25–28
+8. Production & Capstone — Days 29–31
+
+Prefer deriving terminology from existing data instead of manually inventing alternate names.
+
+==================================================
+HOW IT WORKS
+==================================================
+
+Create a concise flow:
+
+## How It Works
+
+1. Select a candidate
+2. Analyze learning history
+3. Choose relevant curriculum topics
+4. Start personalized interview
+5. Evaluate each answer
+6. Follow up / deepen / switch topic
+7. Persist interview state
+8. Produce evidence-backed feedback
+
+A simple Mermaid diagram is welcome if it remains readable on GitHub.
+
+Example conceptual flow:
+
+Candidate Data
+↓
+Learning Signal Analysis
+↓
+Interview Session
+↓
+Gemini Assessment
+↓
+Follow-up / Deepen / New Topic
+↓
+Evidence & Observations
+↓
+Final Feedback
+
+Do not add complicated diagrams.
+
+==================================================
+ARCHITECTURE
+==================================================
+
+Add:
+
+## Architecture
+
+Describe the actual stack accurately.
+
+Frontend:
+- React
+- TypeScript
+- Vite
+
+Backend:
+- Vercel serverless POST /api/interview
+
+AI:
+- Gemini direct REST integration
+- structured JSON responses
+- validated server-side output
+- primary/fallback model strategy
+
+Persistence:
+- Supabase
+- interview_sessions table
+- JSON session state
+
+Deployment:
+- Vercel
+
+Do not mention frameworks/services not used.
+
+Add a compact Mermaid architecture diagram if useful.
+
+==================================================
+API
+==================================================
+
+Add:
+
+## API Contract
+
+Document:
+
+POST /api/interview
+
+Start request example:
+
+{
+  "sessionId": "abc-123",
+  "candidate": { ... }
+}
+
+Continuation:
+
+{
+  "sessionId": "abc-123",
+  "message": "candidate answer"
+}
+
+Normal response:
+
+{
+  "reply": "...",
+  "done": false
+}
+
+Final:
+
+{
+  "reply": "Interview completed.",
+  "done": true,
+  "feedback": {
+    "summary": "...",
+    "strengths": [],
+    "gaps": [],
+    "next": []
+  }
+}
+
+Keep this aligned with the actual implementation.
+
+==================================================
+RELIABILITY
+==================================================
+
+Add:
+
+## Reliability & Failure Handling
+
+Explain:
+
+- Gemini structured output is validated
+- malformed AI output is rejected
+- rate-limit retry guidance is honored
+- normal interview requests use bounded timeouts
+- final feedback uses a larger bounded timeout
+- Flash-Lite can be used after eligible primary-model failures
+- deterministic fallback keeps sessions alive
+- Supabase persists session state
+
+Do not expose implementation secrets.
+
+==================================================
+SECURITY
+==================================================
+
+Add:
+
+## Security Notes
+
+Accurately state:
+
+- Gemini key is server-side only
+- Supabase secret is server-side only
+- `.env.local` is excluded from Git
+- structured responses are validated before use
+- raw provider errors are not exposed to users
+- secrets are not intentionally logged in PROMPTS.md
+
+Do NOT claim:
+
+- HIPAA compliance
+- SOC certification
+- end-to-end encryption
+- regulatory certification
+- "data is never shared"
+
+unless actually implemented/proven.
+
+==================================================
+LIGHT / DARK THEME
+==================================================
+
+Mention that the interface supports:
+
+- Light theme
+- Dark theme
+- system preference on first visit
+- persisted user preference
+
+Keep this short.
+
+==================================================
+SCREENSHOTS
+==================================================
+
+Add:
+
+## Product Preview
+
+IMPORTANT:
+
+Only include screenshots if suitable image files are ALREADY committed in the repository or can be safely created from existing repository assets without browser automation.
+
+Do NOT add broken image paths.
+
+Do NOT invent screenshot files.
+
+If no suitable screenshots currently exist, keep the README polished without them.
+
+Do not block completion on screenshots.
+
+==================================================
+LOCAL DEVELOPMENT
+==================================================
+
+Add:
+
+## Running Locally
+
+Use the real project commands.
+
+Likely:
+
+npm install
+
+or preferably:
+
+npm ci
+
+then:
+
+npx vercel dev
+
+Explain why:
+
+`npm run dev` serves the Vite frontend only, while `npx vercel dev` also serves the `/api/interview` serverless endpoint.
+
+Use the actual repository scripts after inspecting package.json.
+
+==================================================
+ENVIRONMENT VARIABLES
+==================================================
+
+Document variable NAMES ONLY.
+
+Do NOT include real values.
+
+Required:
+
+SUPABASE_URL
+SUPABASE_SECRET_KEY
+GEMINI_API_KEY
+
+Optional:
+
+GEMINI_MODEL
+GEMINI_FALLBACK_MODEL
+
+Example:
+
+SUPABASE_URL=your_supabase_project_url
+SUPABASE_SECRET_KEY=your_server_secret
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-3.5-flash
+GEMINI_FALLBACK_MODEL=gemini-3.5-flash-lite
+
+Never copy `.env.local` values.
+
+==================================================
+SUPABASE SETUP
+==================================================
+
+Briefly explain:
+
+Run the SQL in:
+
+supabase/interview_sessions.sql
+
+to create the required session table.
+
+Do not include any credentials.
+
+==================================================
+AI USAGE EVIDENCE
+==================================================
+
+Create a prominent README section:
+
+## AI Usage & Build Transparency
+
+Explain that the project used:
+
+### Bolt
+
+Used during the earliest phase for initial frontend scaffolding and the first product prototype.
+
+Prompts 01–02 in PROMPTS.md are explicitly marked historical reconstructions because the original early Bolt prompt text was not preserved at the time.
+
+Do not claim they are verbatim transcripts.
+
+### ChatGPT
+
+Used as the planning / architecture / debugging partner.
+
+Examples:
+- requirement interpretation
+- architecture
+- interview strategy
+- candidate-data correctness review
+- Gemini integration planning
+- manual adaptive interview testing
+- Supabase debugging
+- quota/fallback diagnosis
+- Vercel production debugging
+- Codex prompt preparation
+
+### OpenAI Codex
+
+Used in VS Code for repository-level implementation.
+
+Major implementation prompts in PROMPTS.md cover:
+- candidate correctness
+- API/session foundation
+- Supabase storage
+- Gemini adaptation
+- feedback reliability
+- fallback models
+- UI redesign
+- Evidence & Adaptation
+- themes
+- landing page
+- Vercel production fixes
+
+### GitHub
+
+GitHub is not an AI tool.
+
+It serves as the implementation/audit trail connecting:
+AI prompt
+→ changed files
+→ tests
+→ commit
+
+==================================================
+CREATE AI_USAGE_EVIDENCE.md
+==================================================
+
+Create a separate file:
+
+AI_USAGE_EVIDENCE.md
+
+This should contain a more complete submission-ready version of the AI evidence.
+
+Use this structure:
+
+# AI Usage Evidence
+
+Intro:
+
+This project was built through a transparent AI-assisted workflow using Bolt, ChatGPT and OpenAI Codex, with GitHub serving as the implementation and version-history audit trail.
+
+Development progression:
+
+Bolt
+→ ChatGPT
+→ Codex
+→ GitHub verification
+
+Then create sections:
+
+## 1. Bolt — Initial Product & Frontend Prototype
+
+Describe:
+- early vibe coding
+- initial React/Vite experience
+- Candidate Selection → Brief → Mock Interview → Feedback
+
+Transparency:
+Prompts 01–02 are historical reconstructions because exact early Bolt transcripts were not preserved.
+
+## 2. ChatGPT — Planning, Architecture & Debugging
+
+Describe its role in:
+- product strategy
+- architecture
+- debugging
+- testing
+- prompt creation for Codex
+
+Do not claim ChatGPT directly edited repository files.
+
+## 3. OpenAI Codex — Repository Implementation
+
+Describe Codex as the coding agent in VS Code.
+
+Mention that later development prompts are preserved in PROMPTS.md with:
+- full prompt
+- implementation summary
+- files changed
+- tests/build results
+
+## 4. GitHub — Independent Implementation Trail
+
+Explain Git history serves as independent evidence of incremental implementation.
+
+Use links:
+
+Repository:
+https://github.com/chait4499/AI_AGENT
+
+AI Usage Log:
+https://github.com/chait4499/AI_AGENT/blob/main/PROMPTS.md
+
+Live Demo:
+https://ai-agent-blond-one.vercel.app
+
+## Evidence Chain
+
+Create a Markdown table:
+
+Evidence | Purpose
+
+PROMPTS.md
+Primary chronological AI usage log
+
+ChatGPT conversation/transcript
+Planning, architecture and debugging evidence
+
+Codex prompts
+Implementation-agent instructions
+
+GitHub commits
+Independent implementation verification
+
+Public repository
+Source-code review
+
+Live Vercel deployment
+Working project result
+
+Do NOT create a ChatGPT transcript URL unless an actual verified URL exists in the repository/context.
+
+Use wording such as:
+
+"Supporting ChatGPT transcript can be supplied separately if requested."
+
+## Transparency Note
+
+Include:
+
+- AI-assisted development was intentionally used
+- early Bolt prompts were not originally retained
+- reconstructed entries are clearly labeled
+- later Codex prompts were logged sequentially
+- secrets are excluded from public logs
+
+==================================================
+LINK README TO AI EVIDENCE
+==================================================
+
+In README's AI Usage section, add clear links:
+
+Full AI Usage Log:
+PROMPTS.md
+
+Detailed AI Usage Evidence:
+AI_USAGE_EVIDENCE.md
+
+Use relative GitHub links where sensible so forks still work.
+
+==================================================
+PROJECT STRUCTURE
+==================================================
+
+Add a concise:
+
+## Project Structure
+
+Only show important folders/files.
+
+Example:
+
+api/
+  interview.ts
+
+server/
+  gemini.ts
+  interviewEngine.ts
+  sessionStore.ts
+
+src/
+  components/
+  data.ts
+  evidence.ts
+  useInterviewFlow.ts
+
+data/raw/
+  candidates_(1).json
+  curriculum.json
+
+supabase/
+  interview_sessions.sql
+
+PROMPTS.md
+AI_USAGE_EVIDENCE.md
+
+Do not dump every file.
+
+==================================================
+TESTING
+==================================================
+
+Add:
+
+## Validation
+
+Mention the actual commands used:
+
+npm run test:interview
+npm run build
+npx vercel build --prod
+
+Only claim `npx vercel build --prod` if Git history/current project confirms it was successfully used.
+
+Explain briefly that testing covers:
+- session initialization
+- continuation
+- adaptive follow-ups
+- completion rules
+- Gemini fallbacks
+- persistence
+- evidence logic
+- final feedback
+- API contract
+
+Do not invent a coverage percentage.
+
+==================================================
+DEPLOYMENT
+==================================================
+
+Add:
+
+## Deployment
+
+Live:
+
+https://ai-agent-blond-one.vercel.app
+
+Explain:
+
+Frontend + serverless API:
+Vercel
+
+Session persistence:
+Supabase
+
+AI:
+Gemini
+
+Keep short.
+
+==================================================
+SUBMISSION / QUICK LINKS
+==================================================
+
+Near either the top or bottom add:
+
+## Submission Links
+
+Live Demo:
+https://ai-agent-blond-one.vercel.app
+
+Source Code:
+https://github.com/chait4499/AI_AGENT
+
+AI Usage Log:
+https://github.com/chait4499/AI_AGENT/blob/main/PROMPTS.md
+
+Detailed AI Evidence:
+AI_USAGE_EVIDENCE.md
+
+Do not add fake links.
+
+==================================================
+README STYLE
+==================================================
+
+Make the README visually polished.
+
+Use:
+
+- clear headings
+- short paragraphs
+- tasteful emojis only where useful
+- tables where comparison helps
+- blockquote for product thesis
+- Mermaid diagrams only if they add clarity
+- collapsible `<details>` sections only if useful
+
+Avoid:
+
+- huge walls of text
+- excessive emoji
+- fake marketing statistics
+- fake users/customers
+- fake testimonials
+- fake awards
+- unnecessary centered HTML everywhere
+- giant badge walls
+
+The repository should feel professional and judge-friendly.
+
+==================================================
+FACTUAL ACCURACY
+==================================================
+
+Before writing documentation, inspect:
+
+- package.json
+- current project structure
+- API implementation
+- server files
+- environment-variable usage
+- existing PROMPTS.md
+- Supabase SQL
+- current Git history
+
+Do not document features that are not actually implemented.
+
+If this prompt contains a detail that conflicts with the repository, prefer the actual repository and report the discrepancy.
+
+==================================================
+PROMPTS.md
+==================================================
+
+Append this ENTIRE prompt to PROMPTS.md as:
+
+# Prompt 16 — Final GitHub README and AI Usage Evidence
+
+Tool: Codex
+
+Purpose:
+Create a polished submission-ready GitHub README and detailed AI Usage Evidence documentation without modifying application behavior.
+
+Include:
+- full prompt
+- documentation summary
+- files changed
+- validation results
+
+Do not overwrite previous entries.
+
+Never include:
+- API keys
+- Supabase secrets
+- Gemini key values
+- environment-variable values
+- passwords
+- tokens
+
+==================================================
+VALIDATION
+==================================================
+
+After documentation changes:
+
+Verify all Markdown links.
+
+Verify relative links render correctly.
+
+Verify Mermaid syntax if used.
+
+Confirm there are no broken image references.
+
+Search README.md and AI_USAGE_EVIDENCE.md for accidentally included secrets.
+
+Run:
+
+npm run test:interview
+npm run build
+
+Application behavior must remain unchanged.
+
+==================================================
+GIT
+==================================================
+
+Before commit:
+
+git status
+
+Expected tracked documentation changes should be limited primarily to:
+
+README.md
+AI_USAGE_EVIDENCE.md
+PROMPTS.md
+
+Do not stage:
+- .env.local
+- .DS_Store
+- dist/
+- .vercel/
+- build artifacts
+- unrelated files
+
+Run a staged secret scan.
+
+If validation passes:
+
+Commit with:
+
+Polish submission documentation
+
+Push to origin/main.
+
+==================================================
+FINAL REPORT
+==================================================
+
+Report:
+
+- README sections created
+- AI_USAGE_EVIDENCE.md sections created
+- verified project facts
+- links included
+- whether screenshots were included or intentionally omitted
+- whether any application code changed
+- secret scan result
+- npm run test:interview result
+- npm run build result
+- commit hash
+- push status
+
+Do NOT deploy.
+Do NOT modify application code.
+
+Implementation summary:
+- Replaced the placeholder root README with a submission-ready product, architecture, setup, reliability, security, validation, deployment, and submission guide grounded in the current repository.
+- Added a dedicated AI usage evidence document separating the roles of Bolt, ChatGPT, Codex, and GitHub and clearly preserving the historical-reconstruction disclosure.
+- Verified the documented API, interview constraints, curriculum modules, Gemini retry/fallback behavior, Supabase persistence, environment-variable names, theme behavior, scripts, project structure, and prior Vercel production-build record against source and Git history.
+- Intentionally omitted product screenshots because no suitable image assets are committed.
+- Changed documentation only; application code, dependencies, configuration, organizer data, and deployment behavior were not modified.
+
+Files changed:
+- README.md
+- AI_USAGE_EVIDENCE.md
+- PROMPTS.md
+
+Validation results:
+- Markdown links and relative repository paths — passed; all local targets exist and all linked HTTP resources returned successful responses.
+- Mermaid syntax and image references — passed; both diagrams use balanced, simple GitHub Mermaid flowcharts and no product screenshot paths were added.
+- Secret-shaped-value scan — passed; no credential-like values were found in the documentation changes.
+- `npm run test:interview` — passed; the Interview API and adaptive Gemini test suite completed successfully.
+- `npm run build` — passed; TypeScript checking and the Vite production build completed successfully.
