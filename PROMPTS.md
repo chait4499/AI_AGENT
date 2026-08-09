@@ -230,6 +230,7 @@ The pre-backend repository used a fixed mocked question sequence, local/mock ses
 
 Insert this entry immediately after Prompt 02:
 
+#--------------------------------------------------
 # Prompt 03 — Candidate Learning Profile Correctness
 
 Tool: Codex
